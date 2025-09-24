@@ -26,6 +26,17 @@ _MPI_RUNNER = _detect_mpi_runner()
 _MPI_OPTIONS: Tuple[Optional[int], ...] = (None, 2) if _MPI_RUNNER else (None,)
 
 
+
+def _param_key(threads: object, mpi_procs: object) -> Tuple[int, Optional[int]]:
+    thread_val = int(threads) if isinstance(threads, str) else threads
+    mpi_val: Optional[int]
+    if mpi_procs in (None, 'None'):
+        mpi_val = None
+    else:
+        mpi_val = int(mpi_procs) if isinstance(mpi_procs, str) else mpi_procs
+    return int(thread_val), mpi_val
+
+
 def _nan(value: Optional[float]) -> float:
     return value if value is not None else math.nan
 
@@ -66,88 +77,142 @@ class InfiniteMediumEigenvalue:
     param_names = ("threads", "mpi_procs")
     timeout = 600
 
-    @classmethod
-    def setup_cache(cls, *_params: object) -> None:
-        # asv may pass parameter values to setup_cache; ignore them and
-        # lazily create shared resources if missing.
-        if not hasattr(cls, 'runner'):
-            cls.runner = OpenMCRunner(default_mpi_runner=_MPI_RUNNER)
-        if not hasattr(cls, 'model'):
-            cls.model = _build_infinite_medium_model()
-        if not hasattr(cls, '_result_cache'):
-            cls._result_cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
+    def __init__(self) -> None:
+        self._runner: Optional[OpenMCRunner] = None
+        self._model = None
+        self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
 
-    def setup(self, threads: int, mpi_procs: Optional[int]) -> None:
-        cls = type(self)
-        if not hasattr(cls, 'runner') or not hasattr(cls, 'model'):
-            cls.setup_cache(threads, mpi_procs)
-        self.runner = cls.runner
-        self.model = cls.model
-        self._result_cache = cls._result_cache
+    def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
+        if self._cache is not None:
+            return self._cache
 
-    def time_eigenvalue(self, threads: int, mpi_procs: Optional[int]) -> None:
-        self._run(threads, mpi_procs, use_cache=False)
+        runner = self._ensure_runner()
+        model = self._ensure_model()
 
-    def track_elapsed_wall(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=False)
+        cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
+        for threads in _THREAD_OPTIONS:
+            for mpi_procs in _MPI_OPTIONS:
+                result = self._run_model(runner, model, threads, mpi_procs)
+                cache[(threads, mpi_procs)] = result
+
+        self._cache = cache
+        return cache
+
+    def track_elapsed_wall(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.elapsed_seconds)
 
-    def track_user_cpu(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_user_cpu(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.user_seconds)
 
-    def track_system_cpu(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_system_cpu(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.system_seconds)
 
-    def track_max_rss_kb(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_max_rss_kb(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         rss = result.time_usage.max_rss_kb
         return float(rss) if rss is not None else math.nan
 
-    def track_cpu_percent(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_cpu_percent(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.cpu_percent)
 
-    def track_total_time_elapsed(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_total_time_elapsed(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.total_elapsed if stats else None)
 
-    def track_initialization_time(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_initialization_time(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.initialization if stats else None)
 
-    def track_transport_time(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_transport_time(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.transport if stats else None)
 
-    def track_calc_rate_inactive(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_calc_rate_inactive(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_inactive if stats else None)
 
-    def track_calc_rate_active(self, threads: int, mpi_procs: Optional[int]) -> float:
-        result = self._run(threads, mpi_procs, use_cache=True)
+    def track_calc_rate_active(
+        self,
+        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
+        threads: int,
+        mpi_procs: Optional[int],
+    ) -> float:
+        result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_active if stats else None)
 
-    def _run(
+    def _ensure_runner(self) -> OpenMCRunner:
+        if self._runner is None:
+            self._runner = OpenMCRunner(default_mpi_runner=_MPI_RUNNER)
+        return self._runner
+
+    def _ensure_model(self) -> "openmc.model.Model":
+        if self._model is None:
+            self._model = _build_infinite_medium_model()
+        return self._model
+
+    def _run_model(
         self,
+        runner: OpenMCRunner,
+        model: "openmc.model.Model",
         threads: int,
         mpi_procs: Optional[int],
-        *,
-        use_cache: bool,
     ) -> OpenMCRunResult:
-        key = (threads, mpi_procs)
-        cache = self._result_cache
-        if use_cache and key in cache:
-            return cache[key]
-
-        result = self.runner.run_model(
-            self.model,
+        result = runner.run_model(
+            model,
             threads=threads,
             mpi_procs=mpi_procs,
             keep_workdir=True,
@@ -156,6 +221,4 @@ class InfiniteMediumEigenvalue:
             raise RuntimeError(
                 f"OpenMC exited with {result.returncode}: {result.stderr.strip()}"
             )
-
-        cache[key] = result
         return result

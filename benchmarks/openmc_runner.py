@@ -333,9 +333,9 @@ class OpenMCRunner:
         raw: Dict[str, str] = {}
         with time_output.open("r", encoding="utf-8") as handle:
             for line in handle:
-                if ':' not in line:
+                if ': ' not in line:
                     continue
-                key, value = line.rsplit(':', 1)
+                key, value = line.split(': ', 1)
                 raw[key.strip()] = value.strip()
 
         return TimeUsage(
