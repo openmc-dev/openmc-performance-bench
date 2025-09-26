@@ -6,7 +6,9 @@ import importlib
 import pkgutil
 from typing import Callable, Dict, Optional, Tuple
 
-ModelBuilder = Callable[[], "openmc.Model"]  # type: ignore[name-defined]
+import openmc
+
+ModelBuilder = Callable[[], openmc.Model]
 ModelSpec = Tuple[str, ModelBuilder, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]]]
 
 # Mapping of module name -> ModelSpec

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Callable, Dict, Optional, Tuple, Type
 
+import openmc
+
 from ..openmc_runner import OpenMCRunResult, OpenMCRunner
 from ..config import _MPI_OPTIONS, _MPI_RUNNER, _THREAD_OPTIONS, _param_key, _nan
 
@@ -163,7 +165,7 @@ class _OpenMCModelBenchmark:
 
 def make_benchmark(
     name: str,
-    model_builder: Callable[[], "openmc.Model"],
+    model_builder: Callable[[], openmc.Model],
     *,
     thread_options: Tuple[int, ...] | None = None,
     mpi_options: Tuple[Optional[int], ...] | None = None,
