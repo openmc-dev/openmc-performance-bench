@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import openmc
 
+BENCHMARK_NAME = "InfiniteMediumEigenvalue"
+
 
 def build_model() -> openmc.Model:
     fuel = openmc.Material(name="UO2 fuel")

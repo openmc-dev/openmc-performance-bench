@@ -168,10 +168,13 @@ def make_benchmark(
     thread_options: Tuple[int, ...] | None = None,
     mpi_options: Tuple[Optional[int], ...] | None = None,
 ) -> Type[_OpenMCModelBenchmark]:
+    threads = thread_options or _THREAD_OPTIONS
+    mpi = mpi_options or _MPI_OPTIONS
     namespace = {
         "__doc__": f"Benchmark for {name} model.",
-        "thread_options": thread_options or _THREAD_OPTIONS,
-        "mpi_options": mpi_options or _MPI_OPTIONS,
+        "thread_options": threads,
+        "mpi_options": mpi,
+        "params": (threads, mpi),
         "_build_model": staticmethod(model_builder),
     }
     return type(name, (_OpenMCModelBenchmark,), namespace)
