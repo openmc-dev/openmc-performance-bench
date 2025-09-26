@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import math
 import shutil
-from typing import Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, Optional, Tuple
+
+import openmc
 
 from .openmc_runner import OpenMCRunResult, OpenMCRunner
-
-if TYPE_CHECKING:  # pragma: no cover - type checking only
-    import openmc
 
 
 _THREAD_OPTIONS: Tuple[int, ...] = (1, 2)
@@ -41,15 +40,12 @@ def _nan(value: Optional[float]) -> float:
     return value if value is not None else math.nan
 
 
-def _build_infinite_medium_model() -> "openmc.model.Model":
-    import openmc
+def _build_infinite_medium_model() -> openmc.Model:
 
     fuel = openmc.Material(name="UO2 fuel")
     fuel.add_element("U", 1, enrichment=4.5)
     fuel.add_element("O", 2)
     fuel.set_density("g/cm3", 10.5)
-
-    materials = openmc.Materials([fuel])
 
     boundary = openmc.Sphere(r=100.0, boundary_type="vacuum")
     cell = openmc.Cell(name="fuel cell", fill=fuel, region=-boundary)
@@ -67,36 +63,34 @@ def _build_infinite_medium_model() -> "openmc.model.Model":
     settings.run_mode = "eigenvalue"
     settings.source = source
 
-    return openmc.model.Model(materials=materials, geometry=geometry, settings=settings)
+    return openmc.Model(geometry=geometry, settings=settings)
 
 
-class InfiniteMediumEigenvalue:
-    """Benchmark an infinite-medium eigenvalue problem."""
+class _OpenMCModelBenchmark:
+    """Common OpenMC benchmarking harness."""
 
     params = (_THREAD_OPTIONS, _MPI_OPTIONS)
     param_names = ("threads", "mpi_procs")
     timeout = 600
+
+    thread_options: Tuple[int, ...] = _THREAD_OPTIONS
+    mpi_options: Tuple[Optional[int], ...] = _MPI_OPTIONS
 
     def __init__(self) -> None:
         self._runner: Optional[OpenMCRunner] = None
         self._model = None
         self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
 
-    def setup_cache(self) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
-        if self._cache is not None:
-            return self._cache
-
-        runner = self._ensure_runner()
-        model = self._ensure_model()
-
-        cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
-        for threads in _THREAD_OPTIONS:
-            for mpi_procs in _MPI_OPTIONS:
-                result = self._run_model(runner, model, threads, mpi_procs)
-                cache[(threads, mpi_procs)] = result
-
-        self._cache = cache
-        return cache
+    def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
+        if self._cache is None:
+            runner = self._ensure_runner()
+            model = self._ensure_model()
+            cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
+            for threads in self.thread_options:
+                for mpi_procs in self.mpi_options:
+                    cache[(threads, mpi_procs)] = self._run_model(runner, model, threads, mpi_procs)
+            self._cache = cache
+        return self._cache
 
     def track_elapsed_wall(
         self,
@@ -199,9 +193,9 @@ class InfiniteMediumEigenvalue:
             self._runner = OpenMCRunner(default_mpi_runner=_MPI_RUNNER)
         return self._runner
 
-    def _ensure_model(self) -> "openmc.model.Model":
+    def _ensure_model(self) -> openmc.Model:
         if self._model is None:
-            self._model = _build_infinite_medium_model()
+            self._model = self._build_model()
         return self._model
 
     def _run_model(
@@ -222,3 +216,13 @@ class InfiniteMediumEigenvalue:
                 f"OpenMC exited with {result.returncode}: {result.stderr.strip()}"
             )
         return result
+
+    def _build_model(self) -> openmc.Model:
+        raise NotImplementedError
+
+
+class InfiniteMediumEigenvalue(_OpenMCModelBenchmark):
+    """Benchmark an infinite-medium eigenvalue problem."""
+
+    def _build_model(self) -> openmc.Model:
+        return _build_infinite_medium_model()
