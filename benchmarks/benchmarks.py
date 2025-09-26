@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import os
 import shutil
 from typing import Dict, Optional, Tuple
 
@@ -22,7 +23,20 @@ def _detect_mpi_runner() -> Optional[Tuple[str, ...]]:
 
 
 _MPI_RUNNER = _detect_mpi_runner()
-_MPI_OPTIONS: Tuple[Optional[int], ...] = (None, 2) if _MPI_RUNNER else (None,)
+
+
+
+def _detect_mpi_enabled() -> bool:
+    runner = OpenMCRunner(default_mpi_runner=_MPI_RUNNER)
+    try:
+        build_info = runner._get_build_info(runner.openmc_exec, os.environ)
+    except Exception:
+        return True
+    return runner._build_supports_mpi(build_info)
+
+
+_MPI_ENABLED = _detect_mpi_enabled()
+_MPI_OPTIONS: Tuple[Optional[int], ...] = (None, 2) if (_MPI_ENABLED and _MPI_RUNNER) else (None,)
 
 
 
