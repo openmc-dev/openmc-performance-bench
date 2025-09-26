@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 import shutil
@@ -11,8 +12,10 @@ import openmc
 
 from .openmc_runner import OpenMCRunResult, OpenMCRunner
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-_THREAD_OPTIONS: Tuple[int, ...] = (1, 2)
+_THREAD_OPTIONS: Tuple[int, ...] = (1, 2, 4)
 
 
 def _detect_mpi_runner() -> Optional[Tuple[str, ...]]:
@@ -102,7 +105,10 @@ class _OpenMCModelBenchmark:
             cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
             for threads in self.thread_options:
                 for mpi_procs in self.mpi_options:
-                    cache[(threads, mpi_procs)] = self._run_model(runner, model, threads, mpi_procs)
+                    logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}")
+                    cache[threads, mpi_procs] = self._run_model(runner, model, threads, mpi_procs)
+                    logger.info(f"OpenMC output:\n{cache[threads, mpi_procs].stdout}")
+
             self._cache = cache
         return self._cache
 
