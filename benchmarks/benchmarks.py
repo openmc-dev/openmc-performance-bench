@@ -82,7 +82,7 @@ class InfiniteMediumEigenvalue:
         self._model = None
         self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
 
-    def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
+    def setup_cache(self) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
         if self._cache is not None:
             return self._cache
 

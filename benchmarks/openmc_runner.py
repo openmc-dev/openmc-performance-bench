@@ -228,7 +228,7 @@ class OpenMCRunner:
     def _build_supports_mpi(build_info: Optional[OpenMCBuildInfo]) -> bool:
         if build_info is None:
             return True
-        raw_value = build_info.raw.get("MPI enabled") or build_info.raw.get("MPI Enabled")
+        raw_value = build_info.raw.get("MPI enabled")
         if raw_value is None:
             return True
         return raw_value.strip().lower() in {"yes", "true", "1"}
