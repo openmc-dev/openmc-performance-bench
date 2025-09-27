@@ -1,0 +1,12 @@
+diff --git a/contrib/metis/GKlib/string.c b/contrib/metis/GKlib/string.c
+index 7ce7c06e4..210ec7be3 100644
+--- a/contrib/metis/GKlib/string.c
++++ b/contrib/metis/GKlib/string.c
+@@ -13,6 +13,7 @@ of standard functions (but with enhanced functionality).
+ */
+ /************************************************************************/
+ 
++#define _XOPEN_SOURCE
+ #include <GKlib.h>
+ #include <time.h> // strptime
+ 
