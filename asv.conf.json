@@ -34,19 +34,14 @@
 
     // Customizable commands for installing and uninstalling the project.
     // See asv.conf.json documentation.
-    // "install_command": ["in-dir={env_dir} python -m pip install {wheel_file}"],
-    // "uninstall_command": ["return-code=any python -m pip uninstall -y {project}"],
+    "install_command": [
+        "in-dir={env_dir} /usr/bin/cmake -S {build_dir} -B {build_dir}/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX={env_dir} -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin",
+        "in-dir={env_dir} /usr/bin/cmake --build {build_dir}/build --target install -- -j",
+        "in-dir={env_dir} python -m pip install {build_dir}"
+    ],
+    "uninstall_command": ["return-code=any python -m pip uninstall -y openmc"],
 
-    // List of branches to benchmark. If not provided, defaults to "main"
-    // (for git) or "default" (for mercurial).
-    "branches": ["develop"], // for git
-    // "branches": ["default"],    // for mercurial
-
-    // The DVCS being used.  If not set, it will be automatically
-    // determined from "repo" by looking at the protocol in the URL
-    // (if remote), or by looking for special directories, such as
-    // ".git" (if local).
-    // "dvcs": "git",
+    "branches": ["develop"],
 
     // The tool to use to create environments.  May be "conda",
     // "virtualenv", or "rattler" (above 3.8)
