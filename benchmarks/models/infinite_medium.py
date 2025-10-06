@@ -13,8 +13,6 @@ def build_model() -> openmc.Model:
     fuel.add_element("O", 2)
     fuel.set_density("g/cm3", 10.5)
 
-    materials = openmc.Materials([fuel])
-
     boundary = openmc.Sphere(r=100.0, boundary_type="vacuum")
     cell = openmc.Cell(name="fuel cell", fill=fuel, region=-boundary)
     geometry = openmc.Geometry([cell])
