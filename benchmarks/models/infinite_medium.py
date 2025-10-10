@@ -20,7 +20,7 @@ def build_model() -> openmc.Model:
     source = openmc.IndependentSource()
     source.space = openmc.stats.Point((0.0, 0.0, 0.0))
     source.angle = openmc.stats.Isotropic()
-    source.energy = openmc.stats.Discrete([2.0e6], [1.0])
+    source.energy = openmc.stats.delta_function(2.0e6)
 
     settings = openmc.Settings()
     settings.batches = 20
