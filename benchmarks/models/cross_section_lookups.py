@@ -132,7 +132,7 @@ def build_model() -> openmc.Model:
     settings = openmc.Settings()
     settings.batches = 20
     settings.inactive = 10
-    settings.particles = 10000
+    settings.particles = 1000
 
     # Uniform source distribution over the slab (z from zmin to zmax)
     source = openmc.IndependentSource()

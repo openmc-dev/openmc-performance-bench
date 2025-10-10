@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import logging
+import itertools
+from types import FunctionType
 from typing import Callable, Dict, Optional, Tuple, Type
 
 import openmc
 
 from ..openmc_runner import OpenMCRunResult, OpenMCRunner
 from ..config import _MPI_OPTIONS, _MPI_RUNNER, _THREAD_OPTIONS, _param_key, _nan
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class _OpenMCModelBenchmark:
@@ -24,12 +30,14 @@ class _OpenMCModelBenchmark:
         self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
 
     def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
+        logger.info(f"Setting up benchmark cache for {type(self).__name__}...")
         if self._cache is None:
             runner = self._ensure_runner()
             model = self._ensure_model()
             cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
             for threads in self.thread_options:
                 for mpi_procs in self.mpi_options:
+                    logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}...")
                     cache[(threads, mpi_procs)] = self._run_model(runner, model, threads, mpi_procs)
             self._cache = cache
         return self._cache
@@ -163,6 +171,23 @@ class _OpenMCModelBenchmark:
         raise NotImplementedError
 
 
+# The setup_cache method needs to be unique for each subclass (asv determines
+# based on its line number), but the auto-generation of the benchmark classes
+# means that there is only a single setup_cache definition. We therefore create
+# a clone of the method for each class with a unique line number.
+_lineno_offset = itertools.count()
+def _clone_setup_cache(class_name):
+    original = _OpenMCModelBenchmark.setup_cache
+    code = original.__code__.replace(
+        co_firstlineno=original.__code__.co_firstlineno + next(_lineno_offset) + 1
+    )
+    new = FunctionType(code, original.__globals__, name=original.__name__,
+                       argdefs=original.__defaults__, closure=original.__closure__)
+    new.__qualname__ = f"{class_name}.setup_cache"
+    new.__doc__ = original.__doc__
+    return new
+
+
 def make_benchmark(
     name: str,
     model_builder: Callable[[], openmc.Model],
@@ -179,4 +204,6 @@ def make_benchmark(
         "params": (threads, mpi),
         "_build_model": staticmethod(model_builder),
     }
-    return type(name, (_OpenMCModelBenchmark,), namespace)
+    cls = type(name, (_OpenMCModelBenchmark,), namespace)
+    cls.setup_cache = _clone_setup_cache(name)
+    return cls
