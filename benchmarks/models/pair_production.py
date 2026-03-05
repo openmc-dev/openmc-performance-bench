@@ -1,28 +1,29 @@
-"""Helper function for building a fixed-source photon transport OpenMC model in
-a regime where the photoelectric effect dominates.
-"""
+"""Photon transport OpenMC model stressing pair production."""
 
-from __future__ import annotations
+import openmc
 
 import numpy as np
 import openmc
 
+BENCHMARK_NAME = "PairProduction"
 
-def build_model(atomic_relaxation : bool) -> openmc.Model:
-    # The photoelectric effect dominates at 100 keV in lead
+
+def build_model() -> openmc.Model:
     lead = openmc.Material(name="lead")
     lead.set_density("g/cm3", 11.34)
     lead.add_element("Pb", 1.0)
 
-    # Geometry is a single large lead sphere
-    sphere = openmc.Sphere(r=100, boundary_type="vacuum")
+    # Geometry is a single lead sphere. The radius is not so large that
+    # secondary photons continue to scatter many times before escaping.
+    sphere = openmc.Sphere(r=20, boundary_type="vacuum")
     geometry = openmc.Geometry([openmc.Cell(fill=lead, region=-sphere)])
 
-    # Isotropic point source of 100 keV photons at the origin
+    # Isotropic point source of 10 MeV photons at the origin. Pair production
+    # dominates at very high energies
     source = openmc.IndependentSource()
     source.space = openmc.stats.Point((0.0, 0.0, 0.0))
     source.angle = openmc.stats.Isotropic()
-    source.energy = openmc.stats.delta_function(100.0e3)
+    source.energy = openmc.stats.delta_function(1.0e9)
     source.particle = "photon"
 
     # Settings with fixed source run and uniform source
@@ -33,6 +34,6 @@ def build_model(atomic_relaxation : bool) -> openmc.Model:
     settings.source = source
     settings.photon_transport = True
     settings.electron_treatment = "led"
-    settings.atomic_relaxation = atomic_relaxation
+    settings.atomic_relaxation = False
 
     return openmc.Model(geometry=geometry, settings=settings)
