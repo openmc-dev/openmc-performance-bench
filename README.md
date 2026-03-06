@@ -206,3 +206,5 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `SphericalMeshSource` | 32³ spherical mesh source sampling |
 | `PointCloud` | 100,000-point cloud source sampling |
 | `MeshDomainRejection` | Mesh source with domain rejection constraints |
+| `SimpleTokamakCSG` | Simple tokamak geometry using CSG |
+| `SimpleTokamakDAGMC` | Simple tokamak geometry using DAGMC |
