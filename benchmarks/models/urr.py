@@ -77,12 +77,12 @@ def build_model() -> openmc.Model:
     cells.append(openmc.Cell(fill=mat4, region=+cyl1 & -cyl5 & +z7 & -z8))
 
     # Create the geometry
-    geometry = openmc.Geometry(cells=cells)
+    geometry = openmc.Geometry(cells)
 
     # Settings with eigenvalue run and box source
     settings = openmc.Settings()
     settings.run_mode = 'eigenvalue'
-    settings.batches = 3000
+    settings.batches = 40
     settings.inactive = 20
     settings.particles = 10000
     settings.source = openmc.IndependentSource()
