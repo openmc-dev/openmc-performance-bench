@@ -130,7 +130,11 @@ For a given commit, ASV calls `setup_cache()` once per thread/MPI configuration,
 
 ## Adding a New Benchmark
 
-Benchmarks are discovered automatically from the [benchmarks/models/](benchmarks/models/) directory. To add a new one:
+Benchmarks are discovered automatically from the [benchmarks/models/](benchmarks/models/) directory. There are two types of benchmarks:
+
+### Model benchmarks
+
+Model benchmarks build an `openmc.Model` and run the `openmc` executable. To add one:
 
 1. Create a new file in `benchmarks/models/`, e.g. `benchmarks/models/my_model.py`.
 
@@ -148,7 +152,38 @@ Benchmarks are discovered automatically from the [benchmarks/models/](benchmarks
 
 3. That's it. The model will be discovered automatically and a benchmark class will be generated for it.
 
-**Optional module-level attributes:**
+Model benchmarks are parameterized by thread count and MPI ranks by default (see [benchmarks/config.py](benchmarks/config.py) for defaults) and record both GNU `time -v` metrics and OpenMC-specific timing metrics.
+
+### Python benchmarks
+
+Python benchmarks run arbitrary Python code (e.g., testing OpenMC's Python API performance) as a subprocess. To add one:
+
+1. Create a new file in `benchmarks/models/`, e.g. `benchmarks/models/my_script.py`.
+
+2. Define a `run_benchmark()` function:
+
+   ```python
+   BENCHMARK_NAME = "MyScript"  # Optional: defaults to CamelCase of filename
+
+   def run_benchmark(*, threads, mpi_procs):
+       import openmc
+       # ... exercise the Python API ...
+   ```
+
+3. That's it. The benchmark will be discovered automatically.
+
+Python benchmarks run once by default (1 thread, no MPI) and record only the GNU `time -v` metrics (wall-clock time, CPU time, memory). To opt in to thread/MPI parameterization, set `THREAD_OPTIONS` and/or `MPI_OPTIONS`:
+
+```python
+THREAD_OPTIONS = (1, 2, 4)           # sweep thread counts
+MPI_OPTIONS = (None, 2)              # also test with 2 MPI ranks
+```
+
+The `threads` and `mpi_procs` keyword arguments are passed to `run_benchmark()` so your code can adapt if needed. The framework also sets `OMP_NUM_THREADS` and `OPENMC_THREADS` in the subprocess environment.
+
+### Common options
+
+**Optional module-level attributes** (for both benchmark types):
 
 | Attribute | Type | Description |
 |---|---|---|
@@ -156,7 +191,9 @@ Benchmarks are discovered automatically from the [benchmarks/models/](benchmarks
 | `THREAD_OPTIONS` | `tuple[int, ...]` | Override thread counts, e.g. `(1, 4, 8)` |
 | `MPI_OPTIONS` | `tuple[int \| None, ...]` | Override MPI ranks, e.g. `(None, 4)` |
 
-If `THREAD_OPTIONS` or `MPI_OPTIONS` are omitted, the global defaults from [benchmarks/config.py](benchmarks/config.py) are used.
+For model benchmarks, omitting `THREAD_OPTIONS` or `MPI_OPTIONS` uses the global defaults from [benchmarks/config.py](benchmarks/config.py). For Python benchmarks, the defaults are `(1,)` and `(None,)` (a single run with no parameterization).
+
+A module should define either `build_model` or `run_benchmark`, not both.
 
 **Private modules** (filenames starting with `_`) are ignored by the auto-discovery system and can be used for shared helpers.
 
@@ -168,7 +205,7 @@ benchmarks/
 ├── config.py              # Global defaults for threads/MPI, auto-detection logic
 ├── openmc_runner.py       # Runs OpenMC under time -v and parses output
 ├── models/
-│   ├── __init__.py        # Auto-discovery: scans for build_model() functions
+│   ├── __init__.py        # Auto-discovery: scans for build_model()/run_benchmark() functions
 │   ├── infinite_medium.py # Simple eigenvalue benchmark
 │   ├── nested_cylinders.py
 │   ├── nested_spheres.py

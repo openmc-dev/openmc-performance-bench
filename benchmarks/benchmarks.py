@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from .models import MODEL_REGISTRY
-from .suites import make_benchmark
+from .models import MODEL_REGISTRY, SCRIPT_REGISTRY
+from .suites import make_benchmark, make_python_benchmark
 
 __all__ = []
 
@@ -13,6 +13,18 @@ for _module_name, (benchmark_name, builder, thread_opts, mpi_opts) in sorted(
     cls = make_benchmark(
         benchmark_name,
         builder,
+        thread_options=thread_opts,
+        mpi_options=mpi_opts,
+    )
+    globals()[benchmark_name] = cls
+    __all__.append(benchmark_name)
+
+for _module_name, (benchmark_name, module_path, thread_opts, mpi_opts) in sorted(
+    SCRIPT_REGISTRY.items(), key=lambda item: item[1][0]
+):
+    cls = make_python_benchmark(
+        benchmark_name,
+        module_path,
         thread_options=thread_opts,
         mpi_options=mpi_opts,
     )

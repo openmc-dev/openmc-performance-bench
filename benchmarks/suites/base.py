@@ -16,31 +16,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class _OpenMCModelBenchmark:
+class _BaseBenchmark:
+    """Common base for all benchmarks with ``time -v`` metrics."""
+
     params = (_THREAD_OPTIONS, _MPI_OPTIONS)
     param_names = ("threads", "mpi_procs")
     timeout = 600
 
     thread_options: Tuple[int, ...] = _THREAD_OPTIONS
     mpi_options: Tuple[Optional[int], ...] = _MPI_OPTIONS
-
-    def __init__(self) -> None:
-        self._runner: Optional[OpenMCRunner] = None
-        self._model = None
-        self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
-
-    def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
-        logger.info(f"Setting up benchmark cache for {type(self).__name__}...")
-        if self._cache is None:
-            runner = self._ensure_runner()
-            model = self._ensure_model()
-            cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
-            for threads in self.thread_options:
-                for mpi_procs in self.mpi_options:
-                    logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}...")
-                    cache[(threads, mpi_procs)] = self._run_model(runner, model, threads, mpi_procs)
-            self._cache = cache
-        return self._cache
 
     def track_elapsed_wall(
         self,
@@ -87,6 +71,28 @@ class _OpenMCModelBenchmark:
     ) -> float:
         result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.cpu_percent)
+
+
+class _OpenMCModelBenchmark(_BaseBenchmark):
+    """Benchmark that builds an OpenMC model and runs the ``openmc`` executable."""
+
+    def __init__(self) -> None:
+        self._runner: Optional[OpenMCRunner] = None
+        self._model = None
+        self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
+
+    def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
+        logger.info(f"Setting up benchmark cache for {type(self).__name__}...")
+        if self._cache is None:
+            runner = self._ensure_runner()
+            model = self._ensure_model()
+            cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
+            for threads in self.thread_options:
+                for mpi_procs in self.mpi_options:
+                    logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}...")
+                    cache[(threads, mpi_procs)] = self._run_model(runner, model, threads, mpi_procs)
+            self._cache = cache
+        return self._cache
 
     def track_total_time_elapsed(
         self,
@@ -176,8 +182,8 @@ class _OpenMCModelBenchmark:
 # means that there is only a single setup_cache definition. We therefore create
 # a clone of the method for each class with a unique line number.
 _lineno_offset = itertools.count()
-def _clone_setup_cache(class_name):
-    original = _OpenMCModelBenchmark.setup_cache
+def _clone_setup_cache(class_name, source_class):
+    original = source_class.setup_cache
     code = original.__code__.replace(
         co_firstlineno=original.__code__.co_firstlineno + next(_lineno_offset) + 1
     )
@@ -205,5 +211,115 @@ def make_benchmark(
         "_build_model": staticmethod(model_builder),
     }
     cls = type(name, (_OpenMCModelBenchmark,), namespace)
-    cls.setup_cache = _clone_setup_cache(name)
+    cls.setup_cache = _clone_setup_cache(name, _OpenMCModelBenchmark)
+    return cls
+
+
+# ---------------------------------------------------------------------------
+# Python script benchmarks
+# ---------------------------------------------------------------------------
+
+_PYTHON_DEFAULT_THREADS: Tuple[int, ...] = (1,)
+_PYTHON_DEFAULT_MPI: Tuple[Optional[int], ...] = (None,)
+
+
+class _PythonBenchmark(_BaseBenchmark):
+    """Benchmark that runs arbitrary Python code as a subprocess."""
+
+    params = (_PYTHON_DEFAULT_THREADS, _PYTHON_DEFAULT_MPI)
+
+    thread_options: Tuple[int, ...] = _PYTHON_DEFAULT_THREADS
+    mpi_options: Tuple[Optional[int], ...] = _PYTHON_DEFAULT_MPI
+
+    _module_path: str = ""  # fully qualified module name, set by factory
+
+    def __init__(self) -> None:
+        self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
+
+    def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
+        logger.info(f"Setting up benchmark cache for {type(self).__name__}...")
+        if self._cache is None:
+            cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
+            for threads in self.thread_options:
+                for mpi_procs in self.mpi_options:
+                    logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}...")
+                    cache[(threads, mpi_procs)] = self._run_script(threads, mpi_procs)
+            self._cache = cache
+        return self._cache
+
+    def _run_script(self, threads: int, mpi_procs: Optional[int]) -> OpenMCRunResult:
+        import os
+        import subprocess
+        import sys
+        import tempfile
+        from pathlib import Path
+
+        workdir = Path(tempfile.mkdtemp(prefix="openmc-pybench-"))
+        try:
+            script_path = workdir / "run_benchmark.py"
+            script_path.write_text(
+                f"import importlib\n"
+                f"mod = importlib.import_module({self._module_path!r})\n"
+                f"mod.run_benchmark(threads={threads!r}, mpi_procs={mpi_procs!r})\n"
+            )
+
+            env = OpenMCRunner._build_environment(
+                os.environ, threads=threads, extra_env=None,
+            )
+            env["PYTHONPATH"] = os.pathsep.join(sys.path)
+
+            cmd: list[str] = []
+            if mpi_procs is not None and mpi_procs > 1 and _MPI_RUNNER:
+                cmd.extend(_MPI_RUNNER)
+                cmd.extend(["-np", str(mpi_procs)])
+            cmd.extend([sys.executable, str(script_path)])
+
+            time_output = workdir / "time-usage.txt"
+            full_cmd = ["/usr/bin/time", "-v", "-o", str(time_output), *cmd]
+
+            completed = subprocess.run(
+                full_cmd, capture_output=True, text=True, env=env, check=False,
+            )
+
+            time_usage = OpenMCRunner._parse_time_output(time_output)
+
+            if completed.returncode != 0:
+                raise RuntimeError(
+                    f"Python benchmark exited with {completed.returncode}: "
+                    f"{completed.stderr.strip()}"
+                )
+
+            return OpenMCRunResult(
+                returncode=completed.returncode,
+                stdout=completed.stdout,
+                stderr=completed.stderr,
+                command=full_cmd,
+                workdir=workdir,
+                threads=threads,
+                mpi_procs=mpi_procs,
+                time_usage=time_usage,
+            )
+        finally:
+            import shutil
+            shutil.rmtree(workdir, ignore_errors=True)
+
+
+def make_python_benchmark(
+    name: str,
+    module_path: str,
+    *,
+    thread_options: Tuple[int, ...] | None = None,
+    mpi_options: Tuple[Optional[int], ...] | None = None,
+) -> Type[_PythonBenchmark]:
+    threads = thread_options or _PYTHON_DEFAULT_THREADS
+    mpi = mpi_options or _PYTHON_DEFAULT_MPI
+    namespace = {
+        "__doc__": f"Python benchmark for {name}.",
+        "thread_options": threads,
+        "mpi_options": mpi,
+        "params": (threads, mpi),
+        "_module_path": module_path,
+    }
+    cls = type(name, (_PythonBenchmark,), namespace)
+    cls.setup_cache = _clone_setup_cache(name, _PythonBenchmark)
     return cls
