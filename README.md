@@ -130,11 +130,11 @@ For a given commit, ASV calls `setup_cache()` once per thread/MPI configuration,
 
 ## Adding a New Benchmark
 
-Benchmarks are discovered automatically from the [benchmarks/models/](benchmarks/models/) directory. There are two types of benchmarks:
+There are two types of benchmarks, each discovered automatically from its own directory:
 
 ### Model benchmarks
 
-Model benchmarks build an `openmc.Model` and run the `openmc` executable. To add one:
+Model benchmarks build an `openmc.Model` and run the `openmc` executable. They are discovered from [benchmarks/models/](benchmarks/models/). To add one:
 
 1. Create a new file in `benchmarks/models/`, e.g. `benchmarks/models/my_model.py`.
 
@@ -156,9 +156,9 @@ Model benchmarks are parameterized by thread count and MPI ranks by default (see
 
 ### Python benchmarks
 
-Python benchmarks run arbitrary Python code (e.g., testing OpenMC's Python API performance) as a subprocess. To add one:
+Python benchmarks run arbitrary Python code (e.g., testing OpenMC's Python API performance) as a subprocess. They are discovered from [benchmarks/scripts/](benchmarks/scripts/). To add one:
 
-1. Create a new file in `benchmarks/models/`, e.g. `benchmarks/models/my_script.py`.
+1. Create a new file in `benchmarks/scripts/`, e.g. `benchmarks/scripts/my_script.py`.
 
 2. Define a `run_benchmark()` function:
 
@@ -193,8 +193,6 @@ The `threads` and `mpi_procs` keyword arguments are passed to `run_benchmark()` 
 
 For model benchmarks, omitting `THREAD_OPTIONS` or `MPI_OPTIONS` uses the global defaults from [benchmarks/config.py](benchmarks/config.py). For Python benchmarks, the defaults are `(1,)` and `(None,)` (a single run with no parameterization).
 
-A module should define either `build_model` or `run_benchmark`, not both.
-
 **Private modules** (filenames starting with `_`) are ignored by the auto-discovery system and can be used for shared helpers.
 
 ## Repository Structure
@@ -205,7 +203,7 @@ benchmarks/
 ├── config.py              # Global defaults for threads/MPI, auto-detection logic
 ├── openmc_runner.py       # Runs OpenMC under time -v and parses output
 ├── models/
-│   ├── __init__.py        # Auto-discovery: scans for build_model()/run_benchmark() functions
+│   ├── __init__.py        # Auto-discovery: scans for build_model() functions
 │   ├── infinite_medium.py # Simple eigenvalue benchmark
 │   ├── nested_cylinders.py
 │   ├── nested_spheres.py
@@ -220,8 +218,10 @@ benchmarks/
 │   ├── spherical_mesh_source.py
 │   ├── point_cloud.py
 │   └── mesh_domain_rejection.py
+├── scripts/
+│   └── __init__.py        # Auto-discovery: scans for run_benchmark() functions
 └── suites/
-    └── base.py            # Base benchmark class and make_benchmark() factory
+    └── base.py            # Base benchmark classes and factory functions
 asv.conf.json              # ASV configuration (repo URL, build commands, branches)
 ```
 

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from .models import MODEL_REGISTRY, SCRIPT_REGISTRY
+from .models import MODEL_REGISTRY
+from .scripts import SCRIPT_REGISTRY
 from .suites import make_benchmark, make_python_benchmark
 
 __all__ = []

@@ -10,11 +10,9 @@ import openmc
 
 ModelBuilder = Callable[[], openmc.Model]
 ModelSpec = Tuple[str, ModelBuilder, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]]]
-ScriptSpec = Tuple[str, str, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]]]
 
-# Mapping of module name -> ModelSpec or ScriptSpec
+# Mapping of module name -> ModelSpec
 MODEL_REGISTRY: Dict[str, ModelSpec] = {}
-SCRIPT_REGISTRY: Dict[str, ScriptSpec] = {}
 
 
 def _default_benchmark_name(module_name: str) -> str:
@@ -29,17 +27,12 @@ def _discover() -> None:
             continue
         module = importlib.import_module(f"{package}.{module_info.name}")
         builder = getattr(module, "build_model", None)
-        runner = getattr(module, "run_benchmark", None)
-        if builder is None and runner is None:
+        if builder is None:
             continue
         benchmark_name = getattr(module, "BENCHMARK_NAME", _default_benchmark_name(module_info.name))
         thread_opts = getattr(module, "THREAD_OPTIONS", None)
         mpi_opts = getattr(module, "MPI_OPTIONS", None)
-        if builder is not None:
-            MODEL_REGISTRY[module_info.name] = (benchmark_name, builder, thread_opts, mpi_opts)
-        elif runner is not None:
-            module_path = f"{package}.{module_info.name}"
-            SCRIPT_REGISTRY[module_info.name] = (benchmark_name, module_path, thread_opts, mpi_opts)
+        MODEL_REGISTRY[module_info.name] = (benchmark_name, builder, thread_opts, mpi_opts)
 
 
 _discover()
@@ -47,4 +40,4 @@ _discover()
 for _module, (_benchmark_name, builder, _thread_opts, _mpi_opts) in MODEL_REGISTRY.items():
     globals()[_module] = builder
 
-__all__ = ['MODEL_REGISTRY', 'SCRIPT_REGISTRY', 'ModelBuilder', 'ModelSpec', 'ScriptSpec'] + sorted(MODEL_REGISTRY)
+__all__ = ['MODEL_REGISTRY', 'ModelBuilder', 'ModelSpec'] + sorted(MODEL_REGISTRY)
