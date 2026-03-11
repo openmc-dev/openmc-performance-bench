@@ -9,7 +9,8 @@ from typing import Callable, Dict, Optional, Tuple
 import openmc
 
 ModelBuilder = Callable[[], openmc.Model]
-ModelSpec = Tuple[str, ModelBuilder, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]]]
+CustomMetrics = Optional[Dict[str, Callable]]
+ModelSpec = Tuple[str, ModelBuilder, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]], CustomMetrics]
 
 # Mapping of module name -> ModelSpec
 MODEL_REGISTRY: Dict[str, ModelSpec] = {}
@@ -32,12 +33,13 @@ def _discover() -> None:
         benchmark_name = getattr(module, "BENCHMARK_NAME", _default_benchmark_name(module_info.name))
         thread_opts = getattr(module, "THREAD_OPTIONS", None)
         mpi_opts = getattr(module, "MPI_OPTIONS", None)
-        MODEL_REGISTRY[module_info.name] = (benchmark_name, builder, thread_opts, mpi_opts)
+        custom_metrics = getattr(module, "CUSTOM_METRICS", None)
+        MODEL_REGISTRY[module_info.name] = (benchmark_name, builder, thread_opts, mpi_opts, custom_metrics)
 
 
 _discover()
 
-for _module, (_benchmark_name, builder, _thread_opts, _mpi_opts) in MODEL_REGISTRY.items():
+for _module, (_benchmark_name, builder, _thread_opts, _mpi_opts, _custom) in MODEL_REGISTRY.items():
     globals()[_module] = builder
 
 __all__ = ['MODEL_REGISTRY', 'ModelBuilder', 'ModelSpec'] + sorted(MODEL_REGISTRY)

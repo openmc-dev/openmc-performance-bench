@@ -68,6 +68,7 @@ class OpenMCRunResult:
     build_info: Optional[OpenMCBuildInfo] = None
     timing_stats: Optional[OpenMCTimingStats] = None
     requested_mpi_procs: Optional[int] = None
+    custom_metrics: Dict[str, float] = field(default_factory=dict)
 
 
 _TIMING_REGEX: Dict[str, Pattern[str]] = {

@@ -16,6 +16,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _make_custom_track(metric_name: str) -> Callable:
+    """Create a ``track_*`` method that reads a pre-computed custom metric."""
+
+    def track(self, results, threads, mpi_procs):
+        result = results[_param_key(threads, mpi_procs)]
+        return _nan(result.custom_metrics.get(metric_name))
+
+    track.__name__ = f"track_{metric_name}"
+    track.__qualname__ = f"_BaseBenchmark.track_{metric_name}"
+    return track
+
+
 class _BaseBenchmark:
     """Common base for all benchmarks with ``time -v`` metrics."""
 
@@ -25,6 +37,12 @@ class _BaseBenchmark:
 
     thread_options: Tuple[int, ...] = _THREAD_OPTIONS
     mpi_options: Tuple[Optional[int], ...] = _MPI_OPTIONS
+
+    _custom_metrics: Dict[str, Callable] = {}
+
+    def _compute_custom_metrics(self, result: OpenMCRunResult) -> None:
+        for name, func in self._custom_metrics.items():
+            result.custom_metrics[name] = func(result)
 
     def track_elapsed_wall(
         self,
@@ -90,7 +108,9 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
             for threads in self.thread_options:
                 for mpi_procs in self.mpi_options:
                     logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}...")
-                    cache[(threads, mpi_procs)] = self._run_model(runner, model, threads, mpi_procs)
+                    result = self._run_model(runner, model, threads, mpi_procs)
+                    self._compute_custom_metrics(result)
+                    cache[(threads, mpi_procs)] = result
             self._cache = cache
         return self._cache
 
@@ -200,16 +220,20 @@ def make_benchmark(
     *,
     thread_options: Tuple[int, ...] | None = None,
     mpi_options: Tuple[Optional[int], ...] | None = None,
+    custom_metrics: Dict[str, Callable] | None = None,
 ) -> Type[_OpenMCModelBenchmark]:
     threads = thread_options or _THREAD_OPTIONS
     mpi = mpi_options or _MPI_OPTIONS
-    namespace = {
+    namespace: Dict[str, object] = {
         "__doc__": f"Benchmark for {name} model.",
         "thread_options": threads,
         "mpi_options": mpi,
         "params": (threads, mpi),
         "_build_model": staticmethod(model_builder),
+        "_custom_metrics": custom_metrics or {},
     }
+    for metric_name in (custom_metrics or {}):
+        namespace[f"track_{metric_name}"] = _make_custom_track(metric_name)
     cls = type(name, (_OpenMCModelBenchmark,), namespace)
     cls.setup_cache = _clone_setup_cache(name, _OpenMCModelBenchmark)
     return cls
@@ -289,7 +313,7 @@ class _PythonBenchmark(_BaseBenchmark):
                     f"{completed.stderr.strip()}"
                 )
 
-            return OpenMCRunResult(
+            result = OpenMCRunResult(
                 returncode=completed.returncode,
                 stdout=completed.stdout,
                 stderr=completed.stderr,
@@ -299,6 +323,8 @@ class _PythonBenchmark(_BaseBenchmark):
                 mpi_procs=mpi_procs,
                 time_usage=time_usage,
             )
+            self._compute_custom_metrics(result)
+            return result
         finally:
             import shutil
             shutil.rmtree(workdir, ignore_errors=True)
@@ -310,16 +336,20 @@ def make_python_benchmark(
     *,
     thread_options: Tuple[int, ...] | None = None,
     mpi_options: Tuple[Optional[int], ...] | None = None,
+    custom_metrics: Dict[str, Callable] | None = None,
 ) -> Type[_PythonBenchmark]:
     threads = thread_options or _PYTHON_DEFAULT_THREADS
     mpi = mpi_options or _PYTHON_DEFAULT_MPI
-    namespace = {
+    namespace: Dict[str, object] = {
         "__doc__": f"Python benchmark for {name}.",
         "thread_options": threads,
         "mpi_options": mpi,
         "params": (threads, mpi),
         "_module_path": module_path,
+        "_custom_metrics": custom_metrics or {},
     }
+    for metric_name in (custom_metrics or {}):
+        namespace[f"track_{metric_name}"] = _make_custom_track(metric_name)
     cls = type(name, (_PythonBenchmark,), namespace)
     cls.setup_cache = _clone_setup_cache(name, _PythonBenchmark)
     return cls

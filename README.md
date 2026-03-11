@@ -190,10 +190,42 @@ The `threads` and `mpi_procs` keyword arguments are passed to `run_benchmark()` 
 | `BENCHMARK_NAME` | `str` | Display name in ASV (defaults to CamelCase of filename) |
 | `THREAD_OPTIONS` | `tuple[int, ...]` | Override thread counts, e.g. `(1, 4, 8)` |
 | `MPI_OPTIONS` | `tuple[int \| None, ...]` | Override MPI ranks, e.g. `(None, 4)` |
+| `CUSTOM_METRICS` | `dict[str, callable]` | Custom metrics to track (see below) |
 
 For model benchmarks, omitting `THREAD_OPTIONS` or `MPI_OPTIONS` uses the global defaults from [benchmarks/config.py](benchmarks/config.py). For Python benchmarks, the defaults are `(1,)` and `(None,)` (a single run with no parameterization).
 
 **Private modules** (filenames starting with `_`) are ignored by the auto-discovery system and can be used for shared helpers.
+
+### Custom metrics
+
+By default, benchmarks report the standard `time -v` metrics (and OpenMC timing metrics for model benchmarks). To add custom results, define a `CUSTOM_METRICS` dict in your module:
+
+```python
+import openmc
+
+def build_model() -> openmc.Model:
+    ...
+
+def _figure_of_merit(result):
+    """FOM = 1 / (R^2 * T) where R is relative error, T is transport time."""
+    sp = openmc.StatePoint(result.workdir / 'statepoint.20.h5')
+    tally = sp.get_tally(name='flux')
+    rel_err = tally.std_dev.flat[0] / tally.mean.flat[0]
+    return 1.0 / (rel_err**2 * result.timing_stats.transport)
+
+CUSTOM_METRICS = {
+    "figure_of_merit": _figure_of_merit,
+}
+```
+
+Each key in the dict becomes a `track_<key>` method on the ASV benchmark class (e.g., `track_figure_of_merit`). The callable receives an `OpenMCRunResult` object with access to:
+
+- `result.stdout` / `result.stderr` — captured output
+- `result.workdir` — directory containing output files (statepoint, etc.)
+- `result.time_usage` — wall-clock time, CPU time, memory
+- `result.timing_stats` — OpenMC timing (model benchmarks only)
+
+Custom metric functions run during `setup_cache` while the working directory is still available, so they can read statepoint files or any other output.
 
 ## Repository Structure
 
