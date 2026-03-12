@@ -290,7 +290,14 @@ class _PythonBenchmark(_BaseBenchmark):
             env = OpenMCRunner._build_environment(
                 os.environ, threads=threads, extra_env=None,
             )
-            env["PYTHONPATH"] = os.pathsep.join(sys.path)
+            # Ensure the project root (parent of the benchmarks package) is
+            # on PYTHONPATH so the subprocess can resolve top-level imports
+            # like ``benchmarks.scripts.foo``.
+            project_root = str(Path(__file__).resolve().parent.parent.parent)
+            paths = list(sys.path)
+            if project_root not in paths:
+                paths.insert(0, project_root)
+            env["PYTHONPATH"] = os.pathsep.join(paths)
 
             cmd: list[str] = []
             if mpi_procs is not None and mpi_procs > 1 and _MPI_RUNNER:

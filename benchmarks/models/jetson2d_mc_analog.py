@@ -17,5 +17,5 @@ CUSTOM_METRICS = MC_CUSTOM_METRICS
 def build_model() -> openmc.Model:
     model, mesh, plasma_cell = build_base_model()
     model.settings.batches = 50
-    model.settings.particles = 4500
+    model.settings.particles = 1000
     return model

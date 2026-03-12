@@ -22,7 +22,7 @@ def build_model() -> openmc.Model:
     model, mesh, plasma_cell = build_base_model()
 
     # Load pre-generated weight windows
-    model.settings.weight_windows = openmc.hdf5_to_wws(_WW_PATH)
+    model.settings.weight_windows_file = _WW_PATH
     model.settings.weight_window_checkpoints = {
         "collision": True,
         "surface": True,
@@ -31,7 +31,7 @@ def build_model() -> openmc.Model:
     model.settings.weight_windows_on = True
 
     # Adjusted particle counts for variance-reduced run
-    model.settings.batches = 10
-    model.settings.particles = 200000
+    model.settings.batches = 50
+    model.settings.particles = 1000
 
     return model

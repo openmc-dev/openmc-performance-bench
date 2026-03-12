@@ -41,9 +41,9 @@ def build_model() -> openmc.Model:
     model.settings.random_ray["source_region_meshes"] = [
         (mesh, [model.geometry.root_universe])
     ]
-    model.settings.particles = 4500
-    model.settings.batches = 200
-    model.settings.inactive = 100
+    model.settings.particles = 500
+    model.settings.batches = 100
+    model.settings.inactive = 50
     model.settings.random_ray["distance_inactive"] = 4000
     model.settings.random_ray["distance_active"] = 20000
     model.settings.random_ray["ray_source"] = openmc.IndependentSource(
