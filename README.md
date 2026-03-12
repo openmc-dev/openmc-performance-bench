@@ -237,22 +237,14 @@ benchmarks/
 ├── openmc_runner.py       # Runs OpenMC under time -v and parses output
 ├── models/
 │   ├── __init__.py        # Auto-discovery: scans for build_model() functions
-│   ├── infinite_medium.py # Simple eigenvalue benchmark
-│   ├── nested_cylinders.py
-│   ├── nested_spheres.py
-│   ├── nested_torii.py
-│   ├── hex_lattices.py
-│   ├── rect_lattices.py
-│   ├── cross_section_lookups.py
-│   ├── urr.py
-│   ├── many_cells.py
-│   ├── regular_mesh_source.py
-│   ├── cylindrical_mesh_source.py
-│   ├── spherical_mesh_source.py
-│   ├── point_cloud.py
-│   └── mesh_domain_rejection.py
+│   ├── _jetson2d.py       # Shared helper for Jetson 2D FW-CADIS benchmarks
+│   ├── infinite_medium.py # Example: simple eigenvalue benchmark
+│   ├── ...                # Other model benchmarks (see table below)
+│   ├── mgxs.h5            # Pre-generated MGXS library for Jetson 2D
+│   └── weight_windows.h5  # Pre-generated weight windows for Jetson 2D
 ├── scripts/
-│   └── __init__.py        # Auto-discovery: scans for run_benchmark() functions
+│   ├── __init__.py        # Auto-discovery: scans for run_benchmark() functions
+│   └── jetson2d_mgxs.py   # MGXS generation benchmark
 └── suites/
     └── base.py            # Base benchmark classes and factory functions
 asv.conf.json              # ASV configuration (repo URL, build commands, branches)
