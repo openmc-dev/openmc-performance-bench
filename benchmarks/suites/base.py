@@ -2,18 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 import itertools
+import os
 from types import FunctionType
 from typing import Callable, Dict, Optional, Tuple, Type
 
 import openmc
 
-from ..openmc_runner import OpenMCRunResult, OpenMCRunner
+from ..openmc_runner import OpenMCRunResult, OpenMCRunner, _tty_write, _run_subprocess_live
 from ..config import _MPI_OPTIONS, _MPI_RUNNER, _THREAD_OPTIONS, _param_key, _nan
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 def _make_custom_track(metric_name: str) -> Callable:
@@ -100,14 +97,16 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
 
     def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
-        logger.info(f"Setting up benchmark cache for {type(self).__name__}...")
+        _tty_write(f"\n{'=' * 60}\n")
+        _tty_write(f"  Benchmark: {type(self).__name__}\n")
+        _tty_write(f"{'=' * 60}\n")
         if self._cache is None:
             runner = self._ensure_runner()
             model = self._ensure_model()
             cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
             for threads in self.thread_options:
                 for mpi_procs in self.mpi_options:
-                    logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}...")
+                    _tty_write(f"  Running: threads={threads}, mpi_procs={mpi_procs}\n")
                     result = self._run_model(runner, model, threads, mpi_procs)
                     self._compute_custom_metrics(result)
                     cache[(threads, mpi_procs)] = result
@@ -186,6 +185,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
             threads=threads,
             mpi_procs=mpi_procs,
             keep_workdir=True,
+            live_output=bool(os.environ.get("ASV_LIVE_OUTPUT")),
         )
         if result.returncode != 0:
             raise RuntimeError(
@@ -261,18 +261,19 @@ class _PythonBenchmark(_BaseBenchmark):
         self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
 
     def setup_cache(self, *_params: object) -> Dict[Tuple[int, Optional[int]], OpenMCRunResult]:
-        logger.info(f"Setting up benchmark cache for {type(self).__name__}...")
+        _tty_write(f"\n{'=' * 60}\n")
+        _tty_write(f"  Benchmark: {type(self).__name__}\n")
+        _tty_write(f"{'=' * 60}\n")
         if self._cache is None:
             cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
             for threads in self.thread_options:
                 for mpi_procs in self.mpi_options:
-                    logger.info(f"Running with threads={threads}, mpi_procs={mpi_procs}...")
+                    _tty_write(f"  Running: threads={threads}, mpi_procs={mpi_procs}\n")
                     cache[(threads, mpi_procs)] = self._run_script(threads, mpi_procs)
             self._cache = cache
         return self._cache
 
     def _run_script(self, threads: int, mpi_procs: Optional[int]) -> OpenMCRunResult:
-        import os
         import subprocess
         import sys
         import tempfile
@@ -308,22 +309,30 @@ class _PythonBenchmark(_BaseBenchmark):
             time_output = workdir / "time-usage.txt"
             full_cmd = ["/usr/bin/time", "-v", "-o", str(time_output), *cmd]
 
-            completed = subprocess.run(
-                full_cmd, capture_output=True, text=True, env=env, check=False,
-            )
+            if os.environ.get("ASV_LIVE_OUTPUT"):
+                returncode, stdout, stderr = _run_subprocess_live(
+                    full_cmd, cwd=None, env=env,
+                )
+            else:
+                completed = subprocess.run(
+                    full_cmd, capture_output=True, text=True, env=env, check=False,
+                )
+                returncode, stdout, stderr = (
+                    completed.returncode, completed.stdout, completed.stderr,
+                )
 
             time_usage = OpenMCRunner._parse_time_output(time_output)
 
-            if completed.returncode != 0:
+            if returncode != 0:
                 raise RuntimeError(
-                    f"Python benchmark exited with {completed.returncode}: "
-                    f"{completed.stderr.strip()}"
+                    f"Python benchmark exited with {returncode}: "
+                    f"{stderr.strip()}"
                 )
 
             result = OpenMCRunResult(
-                returncode=completed.returncode,
-                stdout=completed.stdout,
-                stderr=completed.stderr,
+                returncode=returncode,
+                stdout=stdout,
+                stderr=stderr,
                 command=full_cmd,
                 workdir=workdir,
                 threads=threads,

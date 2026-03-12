@@ -78,7 +78,8 @@ asv run develop^! -b track_transport_time  # that metric only, across all benchm
 ### Other useful flags
 
 - `--quick` — Run fewer samples for a faster (less precise) result
-- `--show-stderr` — Print OpenMC stdout/stderr during the run
+- `--show-stderr` — Print OpenMC stdout/stderr after each benchmark completes
+- `ASV_LIVE_OUTPUT=1` — Stream OpenMC's stdout to the terminal in real time (e.g., `ASV_LIVE_OUTPUT=1 asv run develop^!`). Benchmark names and configurations are always printed regardless of this setting.
 
 ### Viewing results
 
