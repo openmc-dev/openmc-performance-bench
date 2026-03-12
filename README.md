@@ -278,3 +278,7 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `MeshDomainRejection` | Mesh source with domain rejection constraints |
 | `SimpleTokamakCSG` | Simple tokamak geometry using CSG |
 | `SimpleTokamakDAGMC` | Simple tokamak geometry using DAGMC |
+| `Jetson2dMgxs` | MGXS generation (stochastic slab) for 2D JET-like shielding model |
+| `Jetson2dRandomRay` | Random ray FW-CADIS weight window generation for 2D JET-like model |
+| `Jetson2dMcAnalog` | Fixed-source MC without variance reduction for 2D JET-like model |
+| `Jetson2dMcWw` | Fixed-source MC with FW-CADIS weight windows for 2D JET-like model |
