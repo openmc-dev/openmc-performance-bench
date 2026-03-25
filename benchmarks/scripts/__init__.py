@@ -1,4 +1,4 @@
-"""Auto-discover OpenMC model builders for benchmarks."""
+"""Auto-discover Python script benchmarks."""
 
 from __future__ import annotations
 
@@ -6,14 +6,11 @@ import importlib
 import pkgutil
 from typing import Callable, Dict, Optional, Tuple
 
-import openmc
-
-ModelBuilder = Callable[[], openmc.Model]
 CustomMetrics = Optional[Dict[str, Callable]]
-ModelSpec = Tuple[str, ModelBuilder, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]], CustomMetrics]
+ScriptSpec = Tuple[str, str, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]], CustomMetrics]
 
-# Mapping of module name -> ModelSpec
-MODEL_REGISTRY: Dict[str, ModelSpec] = {}
+# Mapping of module name -> ScriptSpec
+SCRIPT_REGISTRY: Dict[str, ScriptSpec] = {}
 
 
 def _default_benchmark_name(module_name: str) -> str:
@@ -27,19 +24,17 @@ def _discover() -> None:
         if module_info.name.startswith("_"):
             continue
         module = importlib.import_module(f"{package}.{module_info.name}")
-        builder = getattr(module, "build_model", None)
-        if builder is None:
+        runner = getattr(module, "run_benchmark", None)
+        if runner is None:
             continue
         benchmark_name = getattr(module, "BENCHMARK_NAME", _default_benchmark_name(module_info.name))
         thread_opts = getattr(module, "THREAD_OPTIONS", None)
         mpi_opts = getattr(module, "MPI_OPTIONS", None)
         custom_metrics = getattr(module, "CUSTOM_METRICS", None)
-        MODEL_REGISTRY[module_info.name] = (benchmark_name, builder, thread_opts, mpi_opts, custom_metrics)
+        module_path = f"{package}.{module_info.name}"
+        SCRIPT_REGISTRY[module_info.name] = (benchmark_name, module_path, thread_opts, mpi_opts, custom_metrics)
 
 
 _discover()
 
-for _module, (_benchmark_name, builder, _thread_opts, _mpi_opts, _custom) in MODEL_REGISTRY.items():
-    globals()[_module] = builder
-
-__all__ = ['MODEL_REGISTRY', 'ModelBuilder', 'ModelSpec'] + sorted(MODEL_REGISTRY)
+__all__ = ['SCRIPT_REGISTRY', 'ScriptSpec']

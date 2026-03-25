@@ -15,7 +15,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
-from typing import Dict, Mapping, MutableMapping, Optional, Pattern, Sequence
+import threading
+from typing import Dict, List, Mapping, MutableMapping, Optional, Pattern, Sequence
 
 
 @dataclass
@@ -68,6 +69,51 @@ class OpenMCRunResult:
     build_info: Optional[OpenMCBuildInfo] = None
     timing_stats: Optional[OpenMCTimingStats] = None
     requested_mpi_procs: Optional[int] = None
+    custom_metrics: Dict[str, float] = field(default_factory=dict)
+
+
+def _tty_write(msg: str) -> None:
+    """Write directly to the terminal, bypassing ASV's fd redirects."""
+    try:
+        with open("/dev/tty", "w") as tty:
+            tty.write(msg)
+            tty.flush()
+    except OSError:
+        pass  # No terminal (CI/headless) — silently skip
+
+
+def _run_subprocess_live(
+    command: Sequence[str],
+    cwd: Optional[str],
+    env: Dict[str, str],
+) -> tuple[int, str, str]:
+    """Run a subprocess, streaming stdout to ``/dev/tty`` while capturing all output."""
+    proc = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    stdout_lines: List[str] = []
+    stderr_lines: List[str] = []
+
+    def _drain(stream, lines: List[str]) -> None:
+        for line in stream:
+            lines.append(line)
+
+    stderr_thread = threading.Thread(target=_drain, args=(proc.stderr, stderr_lines))
+    stderr_thread.start()
+
+    for line in proc.stdout:
+        stdout_lines.append(line)
+        _tty_write(line)
+
+    stderr_thread.join()
+    proc.wait()
+
+    return proc.returncode, "".join(stdout_lines), "".join(stderr_lines)
 
 
 _TIMING_REGEX: Dict[str, Pattern[str]] = {
@@ -108,6 +154,7 @@ class OpenMCRunner:
         openmc_exec: Optional[str] = None,
         time_executable: Optional[str] = None,
         capture_output: bool = True,
+        live_output: bool = False,
     ) -> OpenMCRunResult:
         """
         Export *model* to XML and execute it under ``time -v``.
@@ -141,6 +188,10 @@ class OpenMCRunner:
         capture_output:
             When ``True`` (default), capture stdout/stderr; otherwise inherit the
             parent's streams.
+        live_output:
+            When ``True``, stream OpenMC's stdout to the terminal in real time
+            via ``/dev/tty`` while still capturing all output for metric parsing.
+            Takes precedence over *capture_output*.
         """
 
         run_openmc_exec = openmc_exec or self.openmc_exec
@@ -166,26 +217,35 @@ class OpenMCRunner:
                 time_output=time_output,
             )
 
-            completed = subprocess.run(
-                command,
-                cwd=str(workdir_path),
-                capture_output=capture_output,
-                text=True,
-                env=env,
-                check=False,
-            )
-
-            time_usage = self._parse_time_output(time_output)
-            timing_stats = (
-                _parse_openmc_timing(completed.stdout, completed.stderr)
-                if capture_output
-                else None
-            )
+            if live_output:
+                returncode, stdout, stderr = _run_subprocess_live(
+                    command, cwd=str(workdir_path), env=env,
+                )
+                time_usage = self._parse_time_output(time_output)
+                timing_stats = _parse_openmc_timing(stdout, stderr)
+            else:
+                completed = subprocess.run(
+                    command,
+                    cwd=str(workdir_path),
+                    capture_output=capture_output,
+                    text=True,
+                    env=env,
+                    check=False,
+                )
+                returncode = completed.returncode
+                stdout = completed.stdout if capture_output else ""
+                stderr = completed.stderr if capture_output else ""
+                time_usage = self._parse_time_output(time_output)
+                timing_stats = (
+                    _parse_openmc_timing(stdout, stderr)
+                    if capture_output
+                    else None
+                )
 
             return OpenMCRunResult(
-                returncode=completed.returncode,
-                stdout=completed.stdout if capture_output else "",
-                stderr=completed.stderr if capture_output else "",
+                returncode=returncode,
+                stdout=stdout,
+                stderr=stderr,
                 command=command,
                 workdir=workdir_path,
                 threads=threads,

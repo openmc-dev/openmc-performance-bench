@@ -1,0 +1,276 @@
+# OpenMC Performance Benchmark Suite
+
+This repository contains an [Airspeed Velocity (ASV)](https://asv.readthedocs.io/) benchmark suite for tracking OpenMC performance across commits. It runs a collection of OpenMC models and records timing and memory metrics for each.
+
+## Requirements
+
+- Python with ASV installed (`pip install asv`)
+- GNU `time` at `/usr/bin/time` (standard on Linux; macOS users may need `brew install gnu-time`)
+- CMake (for building OpenMC from source when not using an existing environment)
+- Optional: `mpirun` or `mpiexec` on `PATH` for MPI benchmarks
+
+## Running the Benchmarks
+
+### For a specific OpenMC commit
+
+To benchmark the tip of the `develop` branch:
+
+```sh
+asv run develop^!
+```
+
+The `^!` suffix is a git range shorthand meaning "just this single commit." Without it, ASV would attempt to benchmark the entire commit history reachable from `develop`. ASV will clone the OpenMC repository, build it from source using CMake, and run all benchmarks.
+
+To benchmark a specific commit hash:
+
+```sh
+asv run <commit-hash>^!
+```
+
+To benchmark a range of commits (e.g., for regression hunting):
+
+```sh
+asv run <older-hash>..<newer-hash>
+```
+
+### Using an existing OpenMC installation
+
+If OpenMC is already built and installed in a Python environment, you can skip the build step entirely using ASV's `existing` environment type:
+
+```sh
+asv run --environment existing <commit-hash>^!
+```
+
+The commit hash is used only to label the results — ASV will not check out or build anything. To find the hash of your installed OpenMC:
+
+```sh
+# From the OpenMC source directory you built from:
+git -C /path/to/openmc rev-parse HEAD
+```
+
+If the Python interpreter with OpenMC installed is not the default `python`, specify it explicitly:
+
+```sh
+asv run --environment existing:python=/path/to/python <commit-hash>^!
+```
+
+### Running a single benchmark
+
+Use `-b` with the benchmark class name to run just one model:
+
+```sh
+asv run develop^! -b InfiniteMediumEigenvalue
+```
+
+The `-b` argument is a regex matched against the full benchmark name, which has the form `ClassName.track_method_name`. You can target a specific metric:
+
+```sh
+asv run develop^! -b InfiniteMediumEigenvalue.track_transport_time
+```
+
+Or match a group of benchmarks with a partial pattern:
+
+```sh
+asv run develop^! -b Nested        # runs NestedCylinders, NestedSpheres, NestedTorii
+asv run develop^! -b track_transport_time  # that metric only, across all benchmarks
+```
+
+### Other useful flags
+
+- `--quick` — Run fewer samples for a faster (less precise) result
+- `--show-stderr` — Print OpenMC stdout/stderr after each benchmark completes
+- `ASV_LIVE_OUTPUT=1` — Stream OpenMC's stdout to the terminal in real time (e.g., `ASV_LIVE_OUTPUT=1 asv run develop^!`). Benchmark names and configurations are always printed regardless of this setting.
+
+### Viewing results
+
+After running benchmarks, generate and open the HTML report:
+
+```sh
+asv publish
+asv preview
+```
+
+Results are stored in `.asv/results/` as JSON files and can be compared across commits.
+
+## How Performance Data is Collected
+
+Each benchmark runs OpenMC under GNU `time -v`, which provides system-level resource metrics. OpenMC's own timing output is also captured and parsed. The following metrics are recorded for every benchmark:
+
+**From GNU `time -v`:**
+
+| Metric | Description |
+|---|---|
+| `track_elapsed_wall` | Total wall-clock time (seconds) |
+| `track_user_cpu` | User-space CPU time (seconds) |
+| `track_system_cpu` | Kernel-space CPU time (seconds) |
+| `track_max_rss_kb` | Peak resident memory usage (KB) |
+| `track_cpu_percent` | CPU utilization (%) |
+
+**From OpenMC stdout:**
+
+| Metric | Description |
+|---|---|
+| `track_total_time_elapsed` | OpenMC's reported total elapsed time (seconds) |
+| `track_initialization_time` | Time spent in initialization phase (seconds) |
+| `track_transport_time` | Time spent in particle transport (seconds) |
+| `track_calc_rate_inactive` | Particle rate during inactive batches (particles/second) |
+| `track_calc_rate_active` | Particle rate during active batches (particles/second) |
+
+### Parametrization
+
+Each benchmark is run under multiple configurations automatically:
+
+- **Threads:** 1 and 2 OpenMP threads (sets both `OMP_NUM_THREADS` and `OPENMC_THREADS`)
+- **MPI:** No MPI, and 2 MPI ranks if `mpirun`/`mpiexec` is on `PATH` and OpenMC was built with MPI support
+
+The active configurations are detected at import time in [benchmarks/config.py](benchmarks/config.py).
+
+### Caching
+
+For a given commit, ASV calls `setup_cache()` once per thread/MPI configuration, which runs the full OpenMC simulation and stores the result. The individual `track_*` methods then simply extract values from the cached result — they do not re-run the simulation.
+
+## Adding a New Benchmark
+
+There are two types of benchmarks, each discovered automatically from its own directory:
+
+### Model benchmarks
+
+Model benchmarks build an `openmc.Model` and run the `openmc` executable. They are discovered from [benchmarks/models/](benchmarks/models/). To add one:
+
+1. Create a new file in `benchmarks/models/`, e.g. `benchmarks/models/my_model.py`.
+
+2. Define a `build_model()` function that returns an `openmc.Model`:
+
+   ```python
+   import openmc
+
+   BENCHMARK_NAME = "MyModel"  # Optional: defaults to CamelCase of filename
+
+   def build_model() -> openmc.Model:
+       # ... define materials, geometry, settings ...
+       return openmc.Model(geometry=geometry, settings=settings)
+   ```
+
+3. That's it. The model will be discovered automatically and a benchmark class will be generated for it.
+
+Model benchmarks are parameterized by thread count and MPI ranks by default (see [benchmarks/config.py](benchmarks/config.py) for defaults) and record both GNU `time -v` metrics and OpenMC-specific timing metrics.
+
+### Python benchmarks
+
+Python benchmarks run arbitrary Python code (e.g., testing OpenMC's Python API performance) as a subprocess. They are discovered from [benchmarks/scripts/](benchmarks/scripts/). To add one:
+
+1. Create a new file in `benchmarks/scripts/`, e.g. `benchmarks/scripts/my_script.py`.
+
+2. Define a `run_benchmark()` function:
+
+   ```python
+   BENCHMARK_NAME = "MyScript"  # Optional: defaults to CamelCase of filename
+
+   def run_benchmark(*, threads, mpi_procs):
+       import openmc
+       # ... exercise the Python API ...
+   ```
+
+3. That's it. The benchmark will be discovered automatically.
+
+Python benchmarks run once by default (1 thread, no MPI) and record only the GNU `time -v` metrics (wall-clock time, CPU time, memory). To opt in to thread/MPI parameterization, set `THREAD_OPTIONS` and/or `MPI_OPTIONS`:
+
+```python
+THREAD_OPTIONS = (1, 2, 4)           # sweep thread counts
+MPI_OPTIONS = (None, 2)              # also test with 2 MPI ranks
+```
+
+The `threads` and `mpi_procs` keyword arguments are passed to `run_benchmark()` so your code can adapt if needed. The framework also sets `OMP_NUM_THREADS` and `OPENMC_THREADS` in the subprocess environment.
+
+### Common options
+
+**Optional module-level attributes** (for both benchmark types):
+
+| Attribute | Type | Description |
+|---|---|---|
+| `BENCHMARK_NAME` | `str` | Display name in ASV (defaults to CamelCase of filename) |
+| `THREAD_OPTIONS` | `tuple[int, ...]` | Override thread counts, e.g. `(1, 4, 8)` |
+| `MPI_OPTIONS` | `tuple[int \| None, ...]` | Override MPI ranks, e.g. `(None, 4)` |
+| `CUSTOM_METRICS` | `dict[str, callable]` | Custom metrics to track (see below) |
+
+For model benchmarks, omitting `THREAD_OPTIONS` or `MPI_OPTIONS` uses the global defaults from [benchmarks/config.py](benchmarks/config.py). For Python benchmarks, the defaults are `(1,)` and `(None,)` (a single run with no parameterization).
+
+**Private modules** (filenames starting with `_`) are ignored by the auto-discovery system and can be used for shared helpers.
+
+### Custom metrics
+
+By default, benchmarks report the standard `time -v` metrics (and OpenMC timing metrics for model benchmarks). To add custom results, define a `CUSTOM_METRICS` dict in your module:
+
+```python
+import openmc
+
+def build_model() -> openmc.Model:
+    ...
+
+def _figure_of_merit(result):
+    """FOM = 1 / (R^2 * T) where R is relative error, T is transport time."""
+    sp = openmc.StatePoint(result.workdir / 'statepoint.20.h5')
+    tally = sp.get_tally(name='flux')
+    rel_err = tally.std_dev.flat[0] / tally.mean.flat[0]
+    return 1.0 / (rel_err**2 * result.timing_stats.transport)
+
+CUSTOM_METRICS = {
+    "figure_of_merit": _figure_of_merit,
+}
+```
+
+Each key in the dict becomes a `track_<key>` method on the ASV benchmark class (e.g., `track_figure_of_merit`). The callable receives an `OpenMCRunResult` object with access to:
+
+- `result.stdout` / `result.stderr` — captured output
+- `result.workdir` — directory containing output files (statepoint, etc.)
+- `result.time_usage` — wall-clock time, CPU time, memory
+- `result.timing_stats` — OpenMC timing (model benchmarks only)
+
+Custom metric functions run during `setup_cache` while the working directory is still available, so they can read statepoint files or any other output.
+
+## Repository Structure
+
+```
+benchmarks/
+├── benchmarks.py          # Entry point: registers all benchmark classes with ASV
+├── config.py              # Global defaults for threads/MPI, auto-detection logic
+├── openmc_runner.py       # Runs OpenMC under time -v and parses output
+├── models/
+│   ├── __init__.py        # Auto-discovery: scans for build_model() functions
+│   ├── _jetson2d.py       # Shared helper for Jetson 2D FW-CADIS benchmarks
+│   ├── infinite_medium.py # Example: simple eigenvalue benchmark
+│   ├── ...                # Other model benchmarks (see table below)
+│   ├── mgxs.h5            # Pre-generated MGXS library for Jetson 2D
+│   └── weight_windows.h5  # Pre-generated weight windows for Jetson 2D
+├── scripts/
+│   ├── __init__.py        # Auto-discovery: scans for run_benchmark() functions
+│   └── jetson2d_mgxs.py   # MGXS generation benchmark
+└── suites/
+    └── base.py            # Base benchmark classes and factory functions
+asv.conf.json              # ASV configuration (repo URL, build commands, branches)
+```
+
+## Available Benchmarks
+
+| Benchmark | Description |
+|---|---|
+| `InfiniteMediumEigenvalue` | Simple UO2 sphere eigenvalue problem |
+| `NestedCylinders` | 100 concentric cylindrical shells; tests distance-to-boundary |
+| `NestedSpheres` | 100 concentric spherical shells; tests distance-to-boundary |
+| `NestedTorii` | 100 concentric toroidal shells; tests complex surface intersection |
+| `HexLattices` | Nested hexagonal lattices; tests hex lattice navigation |
+| `RectLattices` | Nested 3D rectangular lattices; tests rect lattice navigation |
+| `CrossSectionLookups` | 200+ nuclides (actinides + fission products); stresses cross-section lookup |
+| `URR` | ICSBEP IEU-MET-FAST-007 Case 4; realistic model with unresolved resonance region |
+| `ManyCells` | Delaunay tetrahedralization of 500+ points; tests many-cell geometry |
+| `RegularMeshSource` | 32³ rectangular mesh source sampling |
+| `CylindricalMeshSource` | 32³ cylindrical mesh source sampling |
+| `SphericalMeshSource` | 32³ spherical mesh source sampling |
+| `PointCloud` | 100,000-point cloud source sampling |
+| `MeshDomainRejection` | Mesh source with domain rejection constraints |
+| `SimpleTokamakCSG` | Simple tokamak geometry using CSG |
+| `SimpleTokamakDAGMC` | Simple tokamak geometry using DAGMC |
+| `Jetson2dMgxs` | MGXS generation (stochastic slab) for 2D JET-like shielding model |
+| `Jetson2dRandomRay` | Random ray FW-CADIS weight window generation for 2D JET-like model |
+| `Jetson2dMcAnalog` | Fixed-source MC without variance reduction for 2D JET-like model |
+| `Jetson2dMcWw` | Fixed-source MC with FW-CADIS weight windows for 2D JET-like model |
