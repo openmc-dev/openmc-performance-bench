@@ -116,6 +116,21 @@ def _run_subprocess_live(
     return proc.returncode, "".join(stdout_lines), "".join(stderr_lines)
 
 
+def _find_time_executable() -> str:
+    def _is_gnu_time(exe: str) -> bool:
+        try:
+            completed = subprocess.run([exe, "--version"], capture_output=True, text=True)
+            return "GNU" in completed.stdout
+        except Exception:
+            return False
+
+    for exe in ("time", "gtime"):
+        path = shutil.which(exe)
+        if path and _is_gnu_time(path):
+            return path
+    raise RuntimeError("GNU time with -v support not found")
+
+
 _TIMING_REGEX: Dict[str, Pattern[str]] = {
     "initialization": re.compile(r"^Total time for initialization\s*=\s*([0-9.eE+-]+)\s*seconds$"),
     "transport": re.compile(r"^Time in transport only\s*=\s*([0-9.eE+-]+)\s*seconds$"),
@@ -132,11 +147,11 @@ class OpenMCRunner:
         self,
         *,
         openmc_exec: str = "openmc",
-        time_executable: str = "/usr/bin/time",
+        time_executable: Optional[str] = None,
         default_mpi_runner: Optional[Sequence[str]] = ("mpirun",),
     ) -> None:
         self.openmc_exec = openmc_exec
-        self.time_executable = time_executable
+        self.time_executable = time_executable or _find_time_executable()
         self.default_mpi_runner = tuple(default_mpi_runner) if default_mpi_runner else None
         self._cached_build_info: Optional[OpenMCBuildInfo] = None
 
