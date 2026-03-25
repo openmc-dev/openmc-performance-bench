@@ -274,3 +274,7 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `Jetson2dRandomRay` | Random ray FW-CADIS weight window generation for 2D JET-like model |
 | `Jetson2dMcAnalog` | Fixed-source MC without variance reduction for 2D JET-like model |
 | `Jetson2dMcWw` | Fixed-source MC with FW-CADIS weight windows for 2D JET-like model |
+| `Compton` | Fe sphere with photon source in Compton scattering energy regime |
+| `Photoelectric` | Pb sphere with photon source in photoelectric effect energy regime |
+| `PhotoelectricDeexcitation` | Photoelectric benchmark with atomic relaxation enabled |
+| `PairProduction` | Pb sphere with photon source in pair production energy regime |
