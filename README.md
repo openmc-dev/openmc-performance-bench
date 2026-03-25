@@ -260,6 +260,7 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `NestedTorii` | 100 concentric toroidal shells; tests complex surface intersection |
 | `HexLattices` | Nested hexagonal lattices; tests hex lattice navigation |
 | `RectLattices` | Nested 3D rectangular lattices; tests rect lattice navigation |
+| `BEAVRS` | Benchmark for Evaluation And Validation of Reactor Simulations |
 | `CrossSectionLookups` | 200+ nuclides (actinides + fission products); stresses cross-section lookup |
 | `URR` | ICSBEP IEU-MET-FAST-007 Case 4; realistic model with unresolved resonance region |
 | `ManyCells` | Delaunay tetrahedralization of 500+ points; tests many-cell geometry |
