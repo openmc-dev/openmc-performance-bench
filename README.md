@@ -282,3 +282,4 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `ThickTargetBremsstrahlung` | Tungsten sphere with high-energy photon source and TTB enabled  |
 | `IncoherentInelastic` | H₂O sphere with 1 eV source; stresses incoherent inelastic scattering |
 | `CoherentElastic` | Graphite sphere with 1 eV source; stresses coherent elastic scattering |
+| `CoupledNeutronPhoton` | Gd sphere; stresses photon production from neutron reactions |
