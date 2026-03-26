@@ -275,6 +275,7 @@ class _PythonBenchmark(_BaseBenchmark):
 
     def _run_script(self, threads: int, mpi_procs: Optional[int]) -> OpenMCRunResult:
         import subprocess
+        import shutil
         import sys
         import tempfile
         from pathlib import Path
@@ -306,8 +307,22 @@ class _PythonBenchmark(_BaseBenchmark):
                 cmd.extend(["-np", str(mpi_procs)])
             cmd.extend([sys.executable, str(script_path)])
 
+            def _find_time_executable() -> str:
+                def _is_gnu_time(exe: str) -> bool:
+                    try:
+                        completed = subprocess.run([exe, "--version"], capture_output=True, text=True)
+                        return "GNU" in completed.stdout
+                    except Exception:
+                        return False
+
+                for exe in ("time", "gtime"):
+                    path = shutil.which(exe)
+                    if path and _is_gnu_time(path):
+                        return path
+                raise RuntimeError("GNU time with -v support not found")
+
             time_output = workdir / "time-usage.txt"
-            full_cmd = ["/usr/bin/time", "-v", "-o", str(time_output), *cmd]
+            full_cmd = [_find_time_executable(), "-v", "-o", str(time_output), *cmd]
 
             if os.environ.get("ASV_LIVE_OUTPUT"):
                 returncode, stdout, stderr = _run_subprocess_live(
@@ -342,7 +357,6 @@ class _PythonBenchmark(_BaseBenchmark):
             self._compute_custom_metrics(result)
             return result
         finally:
-            import shutil
             shutil.rmtree(workdir, ignore_errors=True)
 
 
