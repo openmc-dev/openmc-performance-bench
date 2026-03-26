@@ -284,3 +284,7 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `IncoherentInelastic` | H₂O sphere with 1 eV source; stresses incoherent inelastic scattering |
 | `CoherentElastic` | Graphite sphere with 1 eV source; stresses coherent elastic scattering |
 | `CoupledNeutronPhoton` | Gd sphere; stresses photon production from neutron reactions |
+| `PackSpheresCylinder` | Close random packing of spheres in a cylindrical region |
+| `PackSpheresSphere` | Close random packing of spheres in a sphere |
+| `PackSpheresSphericalShell` | Close random packing of spheres in a spherical shell |
+| `PackSpheresRectangularPrism` | Close random packing of spheres in a rectangular prism |
