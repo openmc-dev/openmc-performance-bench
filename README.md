@@ -279,3 +279,4 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `Photoelectric` | Pb sphere with photon source in photoelectric effect energy regime |
 | `PhotoelectricDeexcitation` | Photoelectric benchmark with atomic relaxation enabled |
 | `PairProduction` | Pb sphere with photon source in pair production energy regime |
+| `ThickTargetBremsstrahlung` | Tungsten sphere with high-energy photon source and TTB enabled  |
