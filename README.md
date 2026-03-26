@@ -262,6 +262,7 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `RectLattices` | Nested 3D rectangular lattices; tests rect lattice navigation |
 | `BEAVRS` | Benchmark for Evaluation And Validation of Reactor Simulations |
 | `CrossSectionLookups` | 200+ nuclides (actinides + fission products); stresses cross-section lookup |
+| `DepletionTallies` | Cross-section lookup benchmark with depletion-like reaction rate tallies |
 | `URR` | ICSBEP IEU-MET-FAST-007 Case 4; realistic model with unresolved resonance region |
 | `ManyCells` | Delaunay tetrahedralization of 500+ points; tests many-cell geometry |
 | `RegularMeshSource` | 32³ rectangular mesh source sampling |
