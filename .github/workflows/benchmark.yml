@@ -137,7 +137,7 @@ jobs:
       - name: Configure AWS credentials from OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::026527020864:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::026527020864:role/GithubActionsRole
           aws-region: us-east-1
 
       - name: Terminate EC2 instance
