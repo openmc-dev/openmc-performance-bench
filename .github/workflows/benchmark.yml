@@ -37,6 +37,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug GitHub context
+        run: |
+          echo "repository=${{ github.repository }}"
+          echo "ref=${{ github.ref }}"
+          echo "actor=${{ github.actor }}"
+          echo "event=${{ github.event_name }}"
+
       - name: Configure AWS credentials from OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
