@@ -27,7 +27,6 @@ on:
 permissions:
   contents: write
   id-token: write
-  administration: write
 
 jobs:
   # Spin up an ephemeral EC2 runner
