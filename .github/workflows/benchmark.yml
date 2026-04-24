@@ -1,0 +1,148 @@
+#-----------------------------------------------------------------------------#
+# Launch an EC2 instance, run benchmarks, and publish results
+#-----------------------------------------------------------------------------#
+
+name: benchmark
+
+# TODO: Decide when to trigger the performance benchmark runs (Nightly? Weekly?
+# And/or on pushes to develop? Possibly a subset of benchmarks in some cases,
+# the full suite in others?)
+on:
+  # Nightly run against the tip of the develop branch
+  # schedule:
+  #   - cron: '0 2 * * *'   # Daily at 2:00 am UTC
+
+  # Manual trigger, optionally targeting a specific OpenMC ref
+  workflow_dispatch:
+    inputs:
+      openmc_ref:
+        description: 'OpenMC commit/branch to benchmark (default: develop)'
+        required: false
+        default: 'develop'
+
+  # Triggered from openmc-dev/openmc via repository_dispatch
+  # repository_dispatch:
+  #   types: [run-perf]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  # Spin up an ephemeral EC2 runner
+  start-runner:
+    runs-on: ubuntu-latest
+    outputs:
+      instance_id: ${{ steps.launch.outputs.instance_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials from OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026527020864:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Python packages
+        run: |
+          pip install --upgrade pip
+          pip install boto3
+
+      - name: Get GitHub runner registration token
+        id: reg-token
+        run: |
+          TOKEN=$(curl -fsSX POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token" \
+            | jq -r .token)
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Launch EC2 instance
+        id: launch
+        run: |
+          OUTPUT=$(python scripts/launch_ec2_instance.py \
+            --runner-token "${{ steps.reg-token.outputs.token }}" \
+            --runner-label "perf-ec2")
+          echo "$OUTPUT"
+          INSTANCE_ID=$(echo "$OUTPUT" | grep '^instance_id=' | cut -d= -f2)
+          echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
+
+  # Run benchmarks on the EC2 runner
+  run-benchmarks:
+    needs: start-runner
+    runs-on: [self-hosted, perf-ec2]
+    timeout-minutes: 120
+    env:
+      MOAB_INSTALL_DIR: /opt/software/moab
+      DAGMC_INSTALL_DIR: /opt/software/dagmc
+      OPENMC_CROSS_SECTIONS: /opt/data/endfb-vii.1-hdf5/cross_sections.xml
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # ASV needs full history for commit metadata
+
+      - name: Determine OpenMC ref
+        id: ref
+        run: |
+          REF="${{ github.event.client_payload.sha
+               || github.event.inputs.openmc_ref
+               || 'develop' }}"
+          echo "openmc_ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Add tools and package directories to PATH
+        run: |
+          echo "/opt/tools-venv/bin" >> "$GITHUB_PATH"
+          echo "$MOAB_INSTALL_DIR/bin" >> "$GITHUB_PATH"
+          echo "$DAGMC_INSTALL_DIR/bin" >> "$GITHUB_PATH"
+
+      - name: Register machine with ASV
+        # Use a fixed name that describes the hardware, not the ephemeral hostname
+        run: asv machine --yes --machine ec2-c7i-flex-large
+
+      - name: Run benchmarks
+        run: |
+          asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr
+
+      - name: Publish HTML report
+        run: asv publish
+
+      - name: Commit results to repo
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .asv/results/
+          git diff --cached --quiet || \
+            git commit -m "benchmark results for ${{ steps.ref.outputs.openmc_ref }} [skip ci]"
+          git push
+
+      - name: Deploy HTML to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .asv/html
+          keep_files: true
+
+  # Always terminate the EC2 instance, even if benchmarks fail
+  stop-runner:
+    if: always()
+    needs: [start-runner, run-benchmarks]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials from OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::026527020864:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Terminate EC2 instance
+        if: needs.start-runner.outputs.instance_id != ''
+        run: |
+          echo "Terminating ${{ needs.start-runner.outputs.instance_id }}"
+          aws ec2 terminate-instances \
+            --instance-ids "${{ needs.start-runner.outputs.instance_id }}"
