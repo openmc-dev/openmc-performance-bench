@@ -12,7 +12,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
 # Core toolchain + OpenMC prerequisites + benchmarking utilities
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  build-essential g++ gfortran cmake git wget \
+  build-essential g++ gfortran cmake git wget jq \
   python${PYVER} python${PYVER}-venv python${PYVER}-dev python3-pip \
   openmpi-bin libopenmpi-dev libhdf5-openmpi-dev libpng-dev libpugixml-dev \
   libfmt-dev libeigen3-dev libnetcdf-dev libtbb-dev numactl libembree-dev time

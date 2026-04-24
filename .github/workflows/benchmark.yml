@@ -53,14 +53,24 @@ jobs:
           pip install --upgrade pip
           pip install boto3
 
+      # TODO: Move to AMI setup
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Get GitHub runner registration token
         id: reg-token
         run: |
-          TOKEN=$(curl -fsSX POST \
+          RESPONSE=$(curl -sS -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token" \
-            | jq -r .token)
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token")
+          echo "$RESPONSE" | jq .
+          TOKEN=$(echo "$RESPONSE" | jq -r .token)
+          test "$TOKEN" != "null"
+          test -n "$TOKEN"
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
       - name: Launch EC2 instance
