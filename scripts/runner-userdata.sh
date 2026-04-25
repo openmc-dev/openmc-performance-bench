@@ -38,7 +38,7 @@ su - "${RUNNER_USER}" -c "
     --url '${GITHUB_REPO_URL}' \
     --token '${RUNNER_TOKEN}' \
     --labels '${RUNNER_LABEL}' \
-    --name 'ec2-ephemeral-\$(hostname)' \
+    --name "ec2-ephemeral-$(hostname)" \
     --ephemeral \
     --unattended \
     --disableupdate
