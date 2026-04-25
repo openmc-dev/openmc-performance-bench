@@ -116,7 +116,7 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr
+          PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr -vv
 
       - name: Publish HTML report
         run: asv publish
