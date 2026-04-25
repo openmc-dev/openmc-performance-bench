@@ -49,7 +49,6 @@ STATUS=$?
 
 echo "Runner exited with status ${STATUS}"
 echo "Sleeping for debugging before shutdown..."
-sleep 600
 
 shutdown -h now
 exit "${STATUS}"
