@@ -89,8 +89,6 @@ jobs:
       MOAB_INSTALL_DIR: /opt/software/moab
       DAGMC_INSTALL_DIR: /opt/software/dagmc
       OPENMC_CROSS_SECTIONS: /opt/data/endfb-vii.1-hdf5/cross_sections.xml
-      CMAKE_BUILD_PARALLEL_LEVEL: "1"
-      MAKEFLAGS: "-j1"
     steps:
       - uses: actions/checkout@v4
         with:
