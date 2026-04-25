@@ -38,9 +38,9 @@ def build_user_data(runner_token: str, runner_label: str, github_repo: str) -> s
     template = USERDATA_TEMPLATE.read_text()
     script = (
         template
-        .replace('"${RUNNER_TOKEN}"', f'"{runner_token}"')
-        .replace('"${RUNNER_LABEL}"', f'"{runner_label}"')
-        .replace('"${GITHUB_REPO}"', f'"{github_repo}"')
+        .replace('"__RUNNER_TOKEN__"', runner_token)
+        .replace('"__RUNNER_LABEL__"', runner_label)
+        .replace('"__GITHUB_REPO__"', github_repo)
     )
     return script
 

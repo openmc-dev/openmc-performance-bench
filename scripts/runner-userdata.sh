@@ -6,12 +6,19 @@
 
 set -euxo pipefail
 
+GITHUB_REPO="__GITHUB_REPO__"
 GITHUB_REPO_URL="https://github.com/${GITHUB_REPO}"
-RUNNER_LABEL="${RUNNER_LABEL}"        # substituted at launch time
-RUNNER_TOKEN="${RUNNER_TOKEN}"        # substituted at launch time
+RUNNER_LABEL="__RUNNER_LABEL__"
+RUNNER_TOKEN="__RUNNER_TOKEN__"
 RUNNER_VERSION="2.323.0"
 RUNNER_USER="ubuntu"
 RUNNER_HOME="/home/${RUNNER_USER}/actions-runner"
+
+# Debugging output
+echo "GITHUB_REPO=${GITHUB_REPO}"
+echo "GITHUB_REPO_URL=${GITHUB_REPO_URL}"
+echo "RUNNER_LABEL=${RUNNER_LABEL}"
+echo "RUNNER_TOKEN length=${#RUNNER_TOKEN}"
 
 # Install the runner app
 mkdir -p "${RUNNER_HOME}"
