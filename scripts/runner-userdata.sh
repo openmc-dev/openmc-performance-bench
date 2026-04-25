@@ -6,12 +6,6 @@
 
 set -euxo pipefail
 
-# Add swap to avoid OOM during builds (debugging)
-sudo fallocate -l 8G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-
 GITHUB_REPO="__GITHUB_REPO__"
 GITHUB_REPO_URL="https://github.com/${GITHUB_REPO}"
 RUNNER_LABEL="__RUNNER_LABEL__"
