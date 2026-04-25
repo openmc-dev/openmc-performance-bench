@@ -74,7 +74,8 @@ jobs:
         run: |
           OUTPUT=$(python scripts/launch_ec2_instance.py \
             --runner-token "${{ steps.reg-token.outputs.token }}" \
-            --runner-label "perf-ec2")
+            --runner-label "perf-ec2" \
+            --github-repo "${{ github.repository }}")
           echo "$OUTPUT"
           INSTANCE_ID=$(echo "$OUTPUT" | grep '^instance_id=' | cut -d= -f2)
           echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"

@@ -33,13 +33,14 @@ USERDATA_TEMPLATE = Path(__file__).parent / "runner-userdata.sh"
 # ---------------------------------------------------------------------------
 
 
-def build_user_data(runner_token: str, runner_label: str) -> str:
+def build_user_data(runner_token: str, runner_label: str, github_repo: str) -> str:
     """Read the runner-userdata.sh template and substitute variables."""
     template = USERDATA_TEMPLATE.read_text()
     script = (
         template
         .replace('"${RUNNER_TOKEN}"', f'"{runner_token}"')
         .replace('"${RUNNER_LABEL}"', f'"{runner_label}"')
+        .replace('"${GITHUB_REPO}"', f'"{github_repo}"')
     )
     return script
 
@@ -91,6 +92,8 @@ def main():
                         help="Short-lived GitHub Actions runner registration token")
     parser.add_argument("--runner-label", default="perf-ec2",
                         help="Label(s) to attach to the runner (comma-separated)")
+    parser.add_argument("--github-repo", default='openmc-dev/openmc-performance-bench',
+                        help="GitHub repository in owner/repo form")
     args = parser.parse_args()
 
     ec2 = boto3.client("ec2", region_name=REGION)
@@ -101,7 +104,11 @@ def main():
         MaxCount=1,
         InstanceType=INSTANCE_TYPE,
         SecurityGroupIds=[SECURITY_GROUP],
-        UserData=build_user_data(args.runner_token, args.runner_label),
+        UserData=build_user_data(
+            args.runner_token,
+            args.runner_label,
+            args.github_repo
+        ),
         BlockDeviceMappings=get_block_device_mappings(ec2),
         TagSpecifications=[{
             "ResourceType": "instance",

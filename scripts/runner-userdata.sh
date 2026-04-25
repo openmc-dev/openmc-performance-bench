@@ -6,7 +6,7 @@
 
 set -euxo pipefail
 
-GITHUB_REPO_URL="https://github.com/openmc-dev/openmc-performance-bench"
+GITHUB_REPO_URL="https://github.com/${GITHUB_REPO}"
 RUNNER_LABEL="${RUNNER_LABEL}"        # substituted at launch time
 RUNNER_TOKEN="${RUNNER_TOKEN}"        # substituted at launch time
 RUNNER_VERSION="2.323.0"
