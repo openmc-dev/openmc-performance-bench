@@ -10,7 +10,7 @@ GITHUB_REPO="__GITHUB_REPO__"
 GITHUB_REPO_URL="https://github.com/${GITHUB_REPO}"
 RUNNER_LABEL="__RUNNER_LABEL__"
 RUNNER_TOKEN="__RUNNER_TOKEN__"
-RUNNER_VERSION="2.323.0"
+RUNNER_VERSION="2.334.0"
 RUNNER_USER="ubuntu"
 RUNNER_HOME="/home/${RUNNER_USER}/actions-runner"
 
@@ -40,8 +40,7 @@ su - "${RUNNER_USER}" -c "
     --labels '${RUNNER_LABEL}' \
     --name "ec2-ephemeral-$(hostname)" \
     --ephemeral \
-    --unattended \
-    --disableupdate
+    --unattended
 "
 
 # Run the runner (blocks until the one job completes)
