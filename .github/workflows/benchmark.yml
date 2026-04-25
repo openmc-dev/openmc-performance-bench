@@ -41,7 +41,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::026527020864:role/GithubActionsRole
-          aws-region: us-east-1
+          aws-region: us-east-2
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -145,7 +145,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::026527020864:role/GithubActionsRole
-          aws-region: us-east-1
+          aws-region: us-east-2
 
       - name: Terminate EC2 instance
         if: needs.start-runner.outputs.instance_id != ''
