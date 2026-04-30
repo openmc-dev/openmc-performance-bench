@@ -36,7 +36,7 @@
     // See asv.conf.json documentation.
     "install_command": [
         "in-dir={env_dir} /usr/bin/cmake -S {build_dir} -B {build_dir}/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX={env_dir} -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DOPENMC_USE_MPI=on -DOPENMC_USE_DAGMC=ON -DHDF5_PREFER_PARALLEL=on",
-        "in-dir={env_dir} /usr/bin/cmake --build {build_dir}/build --target install -- -j",
+        "in-dir={env_dir} /usr/bin/cmake --build {build_dir}/build --target install -- -j1",
         "in-dir={env_dir} python -m pip install {build_dir}"
     ],
     "uninstall_command": ["return-code=any python -m pip uninstall -y openmc"],
