@@ -25,7 +25,7 @@ import boto3
 IMAGE_ID        = "ami-0287117f4444aee01"
 INSTANCE_TYPE   = "c7i-flex.large"
 KEYPAIR_NAME    = None                     # Optional; set to None to omit
-SECURITY_GROUP  = "sg-0e7103cd0b94e4291"
+SECURITY_GROUP  = "sg-09c219bca773abbc7"
 REGION          = "us-east-2"
 ROOT_VOLUME_GB  = 100
 
