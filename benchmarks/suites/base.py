@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import itertools
+import linecache
 import os
-from types import FunctionType
+import sys
+from types import FunctionType, ModuleType
 from typing import Callable, Dict, Optional, Tuple, Type
 
 import openmc
@@ -199,19 +200,37 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
 
 # The setup_cache method needs to be unique for each subclass (asv determines
 # based on its line number), but the auto-generation of the benchmark classes
-# means that there is only a single setup_cache definition. We therefore create
-# a clone of the method for each class with a unique line number.
-_lineno_offset = itertools.count()
+# means that there is only a single setup_cache definition. We therefore
+# dynamically create a distinct function for each class by placing it in a
+# unique synthetic module. This ensures ASV treats each benchmark's setup_cache
+# independently
 def _clone_setup_cache(class_name, source_class):
-    original = source_class.setup_cache
-    code = original.__code__.replace(
-        co_firstlineno=original.__code__.co_firstlineno + next(_lineno_offset) + 1
+    module_name = f"_asv_cache_stubs.{class_name}"
+    filename = f"<{module_name}>"
+
+    # exec into mod.__dict__ so the function's __module__ is set to
+    # module_name automatically (Python reads __name__ from globals)
+    src = (
+        f"def setup_cache(self, *_params):\n"
+        f"    # Cache stub for: {class_name}\n"
+        f"    return _impl(self, *_params)\n"
     )
-    new = FunctionType(code, original.__globals__, name=original.__name__,
-                       argdefs=original.__defaults__, closure=original.__closure__)
-    new.__qualname__ = f"{class_name}.setup_cache"
-    new.__doc__ = original.__doc__
-    return new
+
+    # Register source in linecache so inspect.getsourcelines() succeeds
+    lines = src.splitlines(keepends=True)
+    linecache.cache[filename] = (len(src), None, lines, filename)
+
+    # Create a real module and register it in sys.modules so that
+    # inspect.getmodule() can resolve it, giving a unique mname per benchmark
+    mod = ModuleType(module_name)
+    mod._impl = source_class.setup_cache
+    sys.modules[module_name] = mod
+
+    exec(compile(src, filename, "exec"), mod.__dict__)
+
+    method = mod.setup_cache
+    method.__qualname__ = f"{class_name}.setup_cache"
+    return method
 
 
 def make_benchmark(
