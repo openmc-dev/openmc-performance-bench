@@ -48,7 +48,6 @@ su - "${RUNNER_USER}" -c "cd '${RUNNER_HOME}' && ./run.sh"
 STATUS=$?
 
 echo "Runner exited with status ${STATUS}"
-echo "Sleeping for debugging before shutdown..."
 
 shutdown -h now
 exit "${STATUS}"
