@@ -13,6 +13,11 @@ RUNNER_TOKEN="__RUNNER_TOKEN__"
 RUNNER_VERSION="2.334.0"
 RUNNER_USER="ubuntu"
 RUNNER_HOME="/home/${RUNNER_USER}/actions-runner"
+MAX_RUNTIME_MINUTES=120
+
+# Fallback in case the GHA stop-runner job fails
+echo "Instance will shut down in ${MAX_RUNTIME_MINUTES} minutes"
+shutdown -h +${MAX_RUNTIME_MINUTES}
 
 # Debugging output
 echo "GITHUB_REPO=${GITHUB_REPO}"
