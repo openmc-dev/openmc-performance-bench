@@ -1,12 +1,12 @@
+from copy import deepcopy
+from random import uniform
 import time
 import numpy as np
 import openmc
 import openmc.deplete
 
-openmc.deplete.pool.USE_MULTIPROCESSING = True
+BENCHMARK_NAME = "Activation"
 
-# Set data
-openmc.config['chain_file'] = 'chain_endfb80_reduced.xml'
 
 def run_benchmark(threads, mpi_procs):
     hour = 3600.0
@@ -33,28 +33,32 @@ def run_benchmark(threads, mpi_procs):
         # Create material with randomly sampled data
         mat = openmc.Material()
         mat.set_density('g/cm3', 7.954)
-        mat.add_element('B', 0.0035)
-        mat.add_element('C', 0.040)
-        mat.add_element('Si', 0.47)
-        mat.add_element('V', 0.160)
-        mat.add_element('Cr', 16.8)
-        mat.add_element('Mn', 1.14)
-        mat.add_element('Fe', 68.12)
-        mat.add_element('Co', 0.14)
-        mat.add_element('Ni', 10.7)
-        mat.add_element('Mo', 2.12)
-        mat.add_element('Cu', 0.09)
+        mat.add_element('B', 0.0035*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('C', 0.040*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Si', 0.47*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('V', 0.160*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Cr', 16.8*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Mn', 1.14*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Fe', 68.12*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Co', 0.14*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Ni', 10.7*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Mo', 2.12*(1 + uniform(-0.01, 0.01)))
+        mat.add_element('Cu', 0.09*(1 + uniform(-0.01, 0.01)))
 
-        # TODO: Create a copy of `micro_xs` and randomly perturb the data array
-        # to create a unique MicroXS for each material, then append to `micros`
-        # list
+        # Create a copy of `micro_xs` and randomly perturb the data array to
+        # create a unique MicroXS for each material
+        xs = deepcopy(micro_xs)
+        xs.data *= (1 + uniform(-0.01, 0.01))
+        micros.append(xs)
 
-        # TODO: Random sample a flux value between 0.0 and 1.0 and append to `fluxes` list
+        # Random sample a flux value between 0.0 and 1.0 and append to `fluxes` list
+        fluxes.append(uniform(0.0, 1.0))
 
 
     # Set up activation via IndependentOperator
     op = openmc.deplete.IndependentOperator(
         materials, fluxes, micros, normalization_mode='source-rate',
+        chain_file='chain_endfb80_reduced.xml',
     )
     integrator = openmc.deplete.PredictorIntegrator(
         op, timesteps, source_rates=source_rates,
