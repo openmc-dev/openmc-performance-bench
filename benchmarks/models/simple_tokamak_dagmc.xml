@@ -34,7 +34,7 @@
     </material>
     <material id="2">
       <density value="7.2316" units="g/cm3"/>
-      <nuclide name="C12" ao="0.0012232"/>
+      <nuclide name="C0" ao="0.0012232"/>
       <nuclide name="Mn55" ao="0.016219"/>
       <nuclide name="Ni58" ao="0.070336"/>
       <nuclide name="Ni60" ao="0.027093"/>
@@ -137,7 +137,7 @@
       <nuclide name="Cu63" ao="0.28035"/>
       <nuclide name="Cu65" ao="0.12495"/>
       <nuclide name="Be9" ao="0.5864"/>
-      <nuclide name="C12" ao="0.00043877"/>
+      <nuclide name="C0" ao="0.00043877"/>
       <nuclide name="Ti46" ao="5.5087e-07"/>
       <nuclide name="Ti47" ao="4.9678e-07"/>
       <nuclide name="Ti48" ao="4.9203e-06"/>
@@ -172,7 +172,7 @@
     </material>
     <material id="4">
       <density value="6.947" units="g/cm3"/>
-      <nuclide name="C12" ao="0.031775"/>
+      <nuclide name="C0" ao="0.031775"/>
       <nuclide name="Mn55" ao="0.01097"/>
       <nuclide name="Ni58" ao="0.041944"/>
       <nuclide name="Ni60" ao="0.016157"/>
@@ -253,7 +253,7 @@
     </material>
     <material id="5">
       <density value="7.93" units="g/cm3"/>
-      <nuclide name="C12" ao="0.0013736"/>
+      <nuclide name="C0" ao="0.0013736"/>
       <nuclide name="Mn55" ao="0.018213"/>
       <nuclide name="Ni58" ao="0.07898"/>
       <nuclide name="Ni60" ao="0.030423"/>
@@ -300,7 +300,7 @@
     </material>
     <material id="6">
       <density value="2.5682" units="g/cm3"/>
-      <nuclide name="C12" ao="0.00079062"/>
+      <nuclide name="C0" ao="0.00079062"/>
       <nuclide name="Mn55" ao="0.010483"/>
       <nuclide name="Ni58" ao="0.04546"/>
       <nuclide name="Ni60" ao="0.017511"/>
@@ -350,7 +350,7 @@
     </material>
     <material id="7">
       <density value="5.1364" units="g/cm3"/>
-      <nuclide name="C12" ao="0.00079062"/>
+      <nuclide name="C0" ao="0.00079062"/>
       <nuclide name="Mn55" ao="0.010483"/>
       <nuclide name="Ni58" ao="0.04546"/>
       <nuclide name="Ni60" ao="0.017511"/>
@@ -401,7 +401,7 @@
     <material id="8">
       <density value="19.0" units="g/cm3"/>
       <nuclide name="Al27" ao="0.00010205"/>
-      <nuclide name="C12" ao="0.00045359"/>
+      <nuclide name="C0" ao="0.00045359"/>
       <nuclide name="Ca40" ao="4.4402e-05"/>
       <nuclide name="Ca42" ao="2.9635e-07"/>
       <nuclide name="Ca43" ao="6.1834e-08"/>
