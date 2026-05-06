@@ -1,4 +1,5 @@
 from copy import deepcopy
+from pathlib import Path
 from random import uniform
 import time
 import numpy as np
@@ -6,6 +7,7 @@ import openmc
 import openmc.deplete
 
 BENCHMARK_NAME = "Activation"
+_SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def run_benchmark(threads, mpi_procs):
@@ -25,13 +27,15 @@ def run_benchmark(threads, mpi_procs):
     fluxes = []
     micros = []
     materials = []
-    n = 100
+    n = 500
 
-    micro_xs = openmc.deplete.MicroXS.from_csv('micros.csv')
+    micro_xs = openmc.deplete.MicroXS.from_csv(_SCRIPT_DIR / 'micros.csv')
 
     for i in range(n):
         # Create material with randomly sampled data
         mat = openmc.Material()
+        mat.depletable = True
+        mat.volume = 1.0
         mat.set_density('g/cm3', 7.954)
         mat.add_element('B', 0.0035*(1 + uniform(-0.01, 0.01)))
         mat.add_element('C', 0.040*(1 + uniform(-0.01, 0.01)))
@@ -44,6 +48,7 @@ def run_benchmark(threads, mpi_procs):
         mat.add_element('Ni', 10.7*(1 + uniform(-0.01, 0.01)))
         mat.add_element('Mo', 2.12*(1 + uniform(-0.01, 0.01)))
         mat.add_element('Cu', 0.09*(1 + uniform(-0.01, 0.01)))
+        materials.append(mat)
 
         # Create a copy of `micro_xs` and randomly perturb the data array to
         # create a unique MicroXS for each material
@@ -58,7 +63,7 @@ def run_benchmark(threads, mpi_procs):
     # Set up activation via IndependentOperator
     op = openmc.deplete.IndependentOperator(
         materials, fluxes, micros, normalization_mode='source-rate',
-        chain_file='chain_endfb80_reduced.xml',
+        chain_file=_SCRIPT_DIR / 'chain_endfb80_reduced.xml',
     )
     integrator = openmc.deplete.PredictorIntegrator(
         op, timesteps, source_rates=source_rates,
