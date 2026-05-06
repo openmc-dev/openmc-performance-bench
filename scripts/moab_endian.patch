@@ -1,0 +1,21 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2d87ab7..8564e75 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -164,8 +164,14 @@ set( HAVE_INTTYPES_H    ${MOAB_HAVE_INTTYPES_H} )
+ set( HAVE_STDLIB_H    ${MOAB_HAVE_STDLIB_H} )
+ check_include_file( memory.h     MOAB_HAVE_MEMORY_H )
+ 
+-INCLUDE(TestBigEndian)
+-TEST_BIG_ENDIAN(WORDS_BIGENDIAN)
++if(CMAKE_C_BYTE_ORDER STREQUAL "BIG_ENDIAN")
++  set(WORDS_BIGENDIAN TRUE)
++elseif(CMAKE_C_BYTE_ORDER STREQUAL "LITTLE_ENDIAN")
++  set(WORDS_BIGENDIAN FALSE)
++else()
++  set(WORDS_BIGENDIAN FALSE)
++  message(WARNING "Endianness could not be determined.")
++endif()
+ ################################################################################
+ # Integer size Related Settings
+ ################################################################################
