@@ -12,9 +12,6 @@ workflow can capture it for later termination.
 """
 
 import argparse
-import socket
-import sys
-import time
 from pathlib import Path
 
 import boto3
@@ -22,7 +19,7 @@ import boto3
 # ---------------------------------------------------------------------------
 # Configuration — edit these to match your account / AMI
 # ---------------------------------------------------------------------------
-IMAGE_ID        = "ami-0287117f4444aee01"
+IMAGE_ID        = "ami-0b04ba53b4d9384d2"
 INSTANCE_TYPE   = "c7i-flex.xlarge"
 KEYPAIR_NAME    = None                     # Optional; set to None to omit
 SECURITY_GROUP  = "sg-09c219bca773abbc7"
