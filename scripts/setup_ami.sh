@@ -2,7 +2,7 @@
 set -euxo pipefail
 
 # Adjust if needed
-PYVER=3.12
+PYVER=3.14
 TOOLS_VENV=/opt/tools-venv
 OPENMC_DATA_DIR=/opt/data
 OPENMC_SOFTWARE_DIR=/opt/software
@@ -30,6 +30,7 @@ deactivate
 MOAB_INSTALL_DIR=${OPENMC_SOFTWARE_DIR}/moab
 DD_INSTALL_DIR=${OPENMC_SOFTWARE_DIR}/double-down
 DAGMC_INSTALL_DIR=${OPENMC_SOFTWARE_DIR}/dagmc
+LIBMESH_INSTALL_DIR=${OPENMC_SOFTWARE_DIR}/libmesh
 
 sudo mkdir -p "${OPENMC_SOFTWARE_DIR}"
 sudo chown ubuntu:ubuntu "${OPENMC_SOFTWARE_DIR}"
@@ -37,6 +38,7 @@ sudo chown ubuntu:ubuntu "${OPENMC_SOFTWARE_DIR}"
 # Clone and install MOAB
 git clone  --single-branch -b 5.5.1 --depth 1 https://bitbucket.org/fathomteam/moab
 pushd moab
+git apply ../moab_endian.patch
 mkdir build && pushd build
 cmake -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=$MOAB_INSTALL_DIR \
@@ -80,6 +82,16 @@ cmake -DCMAKE_INSTALL_PREFIX=$DAGMC_INSTALL_DIR \
 make -j2 install
 popd && popd
 rm -fr $HOME/DAGMC
+
+# Clone and install libMesh
+git clone https://github.com/libmesh/libmesh -b v1.8.4 --recurse-submodules
+pushd libmesh
+mkdir build && pushd build
+export METHODS="opt"
+CXXFLAGS="-std=gnu++23" ../configure --prefix=$LIBMESH_INSTALL_DIR --enable-exodus --enable-netcdf=v492 --disable-eigen --disable-lapack --disable-mpi
+make -j2 install
+popd && popd
+rm -rf $HOME/libmesh
 
 # Download and set cross section data
 sudo mkdir -p "${OPENMC_DATA_DIR}"
