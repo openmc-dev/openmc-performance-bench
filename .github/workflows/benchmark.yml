@@ -113,27 +113,41 @@ jobs:
         run: asv machine --yes --machine ec2-c7i-flex-large
 
       - name: Run benchmarks
+        id: asv-run
+        continue-on-error: true
         run: |
           PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr -vv
 
       - name: Publish HTML report
-        run: asv publish
+        if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
+        run: |
+          if [ -d .asv/results ]; then
+            asv publish
+          else
+            echo "No ASV results found; skipping publish"
+          fi
 
       - name: Commit results to repo
+        if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .asv/results/
           git diff --cached --quiet || \
-            git commit -m "benchmark results for ${{ steps.ref.outputs.openmc_ref }} [skip ci]"
+            git commit -m "Add benchmark results for ${{ steps.ref.outputs.openmc_ref }} [skip ci]"
           git push
 
       - name: Deploy HTML to GitHub Pages
+        if: (steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure') && hashFiles('.asv/html/index.html') != ''
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .asv/html
           keep_files: true
+
+      - name: Fail if any benchmarks failed
+        if: steps.asv-run.outcome == 'failure'
+        run: exit 1
 
   # Always terminate the EC2 instance, even if benchmarks fail
   stop-runner:
