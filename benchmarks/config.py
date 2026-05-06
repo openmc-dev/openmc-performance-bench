@@ -32,7 +32,7 @@ def _detect_mpi_enabled() -> bool:
 
 
 _MPI_ENABLED = _detect_mpi_enabled()
-_MPI_OPTIONS: Tuple[Optional[int], ...] = (None, 2) if (_MPI_ENABLED and _MPI_RUNNER) else (None,)
+_MPI_OPTIONS: Tuple[Optional[int], ...] = (None,) if (_MPI_ENABLED and _MPI_RUNNER) else (None,)
 
 
 def _param_key(threads: object, mpi_procs: object) -> Tuple[int, Optional[int]]:
