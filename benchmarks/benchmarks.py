@@ -21,7 +21,7 @@ for _module_name, (benchmark_name, builder, thread_opts, mpi_opts, custom_metric
     globals()[benchmark_name] = cls
     __all__.append(benchmark_name)
 
-for _module_name, (benchmark_name, module_path, thread_opts, mpi_opts, custom_metrics) in sorted(
+for _module_name, (benchmark_name, module_path, thread_opts, mpi_opts, custom_metrics, return_metrics) in sorted(
     SCRIPT_REGISTRY.items(), key=lambda item: item[1][0]
 ):
     cls = make_python_benchmark(
@@ -30,6 +30,7 @@ for _module_name, (benchmark_name, module_path, thread_opts, mpi_opts, custom_me
         thread_options=thread_opts,
         mpi_options=mpi_opts,
         custom_metrics=custom_metrics,
+        return_metrics=return_metrics,
     )
     globals()[benchmark_name] = cls
     __all__.append(benchmark_name)

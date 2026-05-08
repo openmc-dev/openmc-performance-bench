@@ -275,6 +275,7 @@ class _PythonBenchmark(_BaseBenchmark):
     mpi_options: Tuple[Optional[int], ...] = _PYTHON_DEFAULT_MPI
 
     _module_path: str = ""  # fully qualified module name, set by factory
+    _return_metrics: Tuple[str, ...] = ()
 
     def __init__(self) -> None:
         self._cache: Optional[Dict[Tuple[int, Optional[int]], OpenMCRunResult]] = None
@@ -293,6 +294,8 @@ class _PythonBenchmark(_BaseBenchmark):
         return self._cache
 
     def _run_script(self, threads: int, mpi_procs: Optional[int]) -> OpenMCRunResult:
+        import json
+        import numbers
         import subprocess
         import shutil
         import sys
@@ -302,10 +305,15 @@ class _PythonBenchmark(_BaseBenchmark):
         workdir = Path(tempfile.mkdtemp(prefix="openmc-pybench-"))
         try:
             script_path = workdir / "run_benchmark.py"
+            metrics_path = workdir / "returned-metrics.json"
             script_path.write_text(
+                f"import json\n"
                 f"import importlib\n"
                 f"mod = importlib.import_module({self._module_path!r})\n"
-                f"mod.run_benchmark(threads={threads!r}, mpi_procs={mpi_procs!r})\n"
+                f"metrics = mod.run_benchmark(threads={threads!r}, mpi_procs={mpi_procs!r})\n"
+                f"if metrics is not None:\n"
+                f"    with open({str(metrics_path)!r}, 'w') as fh:\n"
+                f"        json.dump(metrics, fh)\n"
             )
 
             env = OpenMCRunner._build_environment(
@@ -373,6 +381,32 @@ class _PythonBenchmark(_BaseBenchmark):
                 mpi_procs=mpi_procs,
                 time_usage=time_usage,
             )
+            if metrics_path.exists():
+                with metrics_path.open() as fh:
+                    returned_metrics = json.load(fh)
+                if not isinstance(returned_metrics, dict):
+                    raise RuntimeError(
+                        f"{self._module_path}.run_benchmark() returned metrics "
+                        "must be a dictionary."
+                    )
+                if not self._return_metrics:
+                    raise RuntimeError(
+                        f"{self._module_path}.run_benchmark() returned metrics, "
+                        "but RETURN_METRICS is not declared."
+                    )
+                for name in self._return_metrics:
+                    if name not in returned_metrics:
+                        raise RuntimeError(
+                            f"{self._module_path}.run_benchmark() did not return "
+                            f"declared metric {name!r}."
+                        )
+                    value = returned_metrics[name]
+                    if isinstance(value, bool) or not isinstance(value, numbers.Real):
+                        raise RuntimeError(
+                            f"{self._module_path}.run_benchmark() returned non-numeric "
+                            f"value for metric {name!r}: {value!r}."
+                        )
+                    result.custom_metrics[name] = float(value)
             self._compute_custom_metrics(result)
             return result
         finally:
@@ -386,9 +420,16 @@ def make_python_benchmark(
     thread_options: Tuple[int, ...] | None = None,
     mpi_options: Tuple[Optional[int], ...] | None = None,
     custom_metrics: Dict[str, Callable] | None = None,
+    return_metrics: Tuple[str, ...] | None = None,
 ) -> Type[_PythonBenchmark]:
     threads = thread_options or _PYTHON_DEFAULT_THREADS
     mpi = mpi_options or _PYTHON_DEFAULT_MPI
+    return_metric_names = tuple(return_metrics or ())
+    custom_metric_names = tuple((custom_metrics or {}).keys())
+    duplicate_metrics = set(return_metric_names).intersection(custom_metric_names)
+    if duplicate_metrics:
+        names = ", ".join(sorted(duplicate_metrics))
+        raise ValueError(f"Duplicate Python benchmark metric names: {names}")
     namespace: Dict[str, object] = {
         "__doc__": f"Python benchmark for {name}.",
         "thread_options": threads,
@@ -396,8 +437,9 @@ def make_python_benchmark(
         "params": (threads, mpi),
         "_module_path": module_path,
         "_custom_metrics": custom_metrics or {},
+        "_return_metrics": return_metric_names,
     }
-    for metric_name in (custom_metrics or {}):
+    for metric_name in (*return_metric_names, *custom_metric_names):
         namespace[f"track_{metric_name}"] = _make_custom_track(metric_name)
     cls = type(name, (_PythonBenchmark,), namespace)
     cls.setup_cache = _clone_setup_cache(name, _PythonBenchmark)

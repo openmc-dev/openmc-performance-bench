@@ -7,7 +7,15 @@ import pkgutil
 from typing import Callable, Dict, Optional, Tuple
 
 CustomMetrics = Optional[Dict[str, Callable]]
-ScriptSpec = Tuple[str, str, Optional[Tuple[int, ...]], Optional[Tuple[Optional[int], ...]], CustomMetrics]
+ReturnMetrics = Tuple[str, ...]
+ScriptSpec = Tuple[
+    str,
+    str,
+    Optional[Tuple[int, ...]],
+    Optional[Tuple[Optional[int], ...]],
+    CustomMetrics,
+    ReturnMetrics,
+]
 
 # Mapping of module name -> ScriptSpec
 SCRIPT_REGISTRY: Dict[str, ScriptSpec] = {}
@@ -31,8 +39,16 @@ def _discover() -> None:
         thread_opts = getattr(module, "THREAD_OPTIONS", None)
         mpi_opts = getattr(module, "MPI_OPTIONS", None)
         custom_metrics = getattr(module, "CUSTOM_METRICS", None)
+        return_metrics = tuple(getattr(module, "RETURN_METRICS", ()))
         module_path = f"{package}.{module_info.name}"
-        SCRIPT_REGISTRY[module_info.name] = (benchmark_name, module_path, thread_opts, mpi_opts, custom_metrics)
+        SCRIPT_REGISTRY[module_info.name] = (
+            benchmark_name,
+            module_path,
+            thread_opts,
+            mpi_opts,
+            custom_metrics,
+            return_metrics,
+        )
 
 
 _discover()

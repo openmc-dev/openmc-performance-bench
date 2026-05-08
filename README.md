@@ -192,6 +192,7 @@ The `threads` and `mpi_procs` keyword arguments are passed to `run_benchmark()` 
 | `THREAD_OPTIONS` | `tuple[int, ...]` | Override thread counts, e.g. `(1, 4, 8)` |
 | `MPI_OPTIONS` | `tuple[int \| None, ...]` | Override MPI ranks, e.g. `(None, 4)` |
 | `CUSTOM_METRICS` | `dict[str, callable]` | Custom metrics to track (see below) |
+| `RETURN_METRICS` | `tuple[str, ...]` | Metric names returned by Python script benchmarks |
 
 For model benchmarks, omitting `THREAD_OPTIONS` or `MPI_OPTIONS` uses the global defaults from [benchmarks/config.py](benchmarks/config.py). For Python benchmarks, the defaults are `(1,)` and `(None,)` (a single run with no parameterization).
 
@@ -199,7 +200,25 @@ For model benchmarks, omitting `THREAD_OPTIONS` or `MPI_OPTIONS` uses the global
 
 ### Custom metrics
 
-By default, benchmarks report the standard `time -v` metrics (and OpenMC timing metrics for model benchmarks). To add custom results, define a `CUSTOM_METRICS` dict in your module:
+By default, benchmarks report the standard `time -v` metrics (and OpenMC timing metrics for model benchmarks). Python script benchmarks can report internal timings by declaring `RETURN_METRICS` and returning a dictionary from `run_benchmark()`, for example:
+
+```python
+RETURN_METRICS = (
+    "speedup",
+    "memory_use",
+)
+
+def run_benchmark(threads, mpi_procs):
+    ...
+    return {
+        "speedup": t/t_ref,
+        "memory_use": kilobytes,
+    }
+```
+
+Each returned metric becomes a `track_<key>` method on the ASV benchmark class.
+
+To add metrics derived from output files or the completed run metadata, define a `CUSTOM_METRICS` dict in your module:
 
 ```python
 import openmc
@@ -219,7 +238,7 @@ CUSTOM_METRICS = {
 }
 ```
 
-Each key in the dict becomes a `track_<key>` method on the ASV benchmark class (e.g., `track_figure_of_merit`). The callable receives an `OpenMCRunResult` object with access to:
+Each key in the dict also becomes a `track_<key>` method on the ASV benchmark class (e.g., `track_figure_of_merit`). The callable receives an `OpenMCRunResult` object with access to:
 
 - `result.stdout` / `result.stderr` — captured output
 - `result.workdir` — directory containing output files (statepoint, etc.)
