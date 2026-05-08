@@ -17,20 +17,7 @@ ACTIVATION_RETURN_METRICS = (
 _SCRIPT_DIR = Path(__file__).resolve().parent
 
 
-def run_activation(n_materials, threads, mpi_procs):
-    hour = 3600.0
-    day = 24*hour
-    source_rates = [2.32e10, 0.0, 2.87e10, 0.0, 1.90e10, 0.0, 1.36e10]
-    source_times = [19440., 61680., 32940., 54840., 15720., 6360., 8940.]
-    cooling_times_cumulative = [
-        1*hour, 6*hour, 12*hour, 16*hour, 20*hour, 1*day, 2*day, 3*day, 4*day,
-        5*day, 7*day, 9*day, 12*day, 15*day, 18*day, 21*day, 30*day, 60*day
-    ]
-
-    source_rates.extend([0.0]*len(cooling_times_cumulative))
-    cooling_times = list(np.diff(cooling_times_cumulative, prepend=0.0))
-    timesteps = source_times + cooling_times
-
+def run_activation(timesteps, source_rates, n_materials, threads, mpi_procs):
     fluxes = []
     micros = []
     materials = []
