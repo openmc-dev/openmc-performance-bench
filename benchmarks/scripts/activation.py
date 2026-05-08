@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pathlib import Path
 from random import uniform
+import os
 import time
 import numpy as np
 import openmc
@@ -72,4 +73,4 @@ def run_benchmark(threads, mpi_procs):
     integrator.integrate(final_step=False)
     end_time = time.perf_counter()
     integration_time = end_time - start_time
-    core_sec_per_mat_timestep = integration_time*8 / (n * len(timesteps))
+    core_sec_per_mat_timestep = integration_time * os.cpu_count() / (n * len(timesteps))
