@@ -1,6 +1,6 @@
 from ._activation import ACTIVATION_RETURN_METRICS, run_activation
 
-BENCHMARK_NAME = "Activation"
+BENCHMARK_NAME = "ActivationMultipleMat"
 RETURN_METRICS = ACTIVATION_RETURN_METRICS
 N_MATERIALS = 500
 

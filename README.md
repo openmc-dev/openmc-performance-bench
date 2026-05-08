@@ -282,6 +282,8 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `BEAVRS` | Benchmark for Evaluation And Validation of Reactor Simulations |
 | `CrossSectionLookups` | 200+ nuclides (actinides + fission products); stresses cross-section lookup |
 | `DepletionTallies` | Cross-section lookup benchmark with depletion-like reaction rate tallies |
+| `ActivationSingleMat` | Depletion activation benchmark with one material and script-level timing metrics |
+| `ActivationMultipleMat` | Depletion activation benchmark with 500 materials and script-level timing metrics |
 | `URR` | ICSBEP IEU-MET-FAST-007 Case 4; realistic model with unresolved resonance region |
 | `ManyCells` | Delaunay tetrahedralization of 500+ points; tests many-cell geometry |
 | `RegularMeshSource` | 32³ rectangular mesh source sampling |
