@@ -50,6 +50,7 @@ class _BaseBenchmark:
     ) -> float:
         result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.elapsed_seconds)
+    track_elapsed_wall.unit = "seconds"
 
     def track_user_cpu(
         self,
@@ -59,6 +60,7 @@ class _BaseBenchmark:
     ) -> float:
         result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.user_seconds)
+    track_user_cpu.unit = "seconds"
 
     def track_system_cpu(
         self,
@@ -68,6 +70,7 @@ class _BaseBenchmark:
     ) -> float:
         result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.system_seconds)
+    track_system_cpu.unit = "seconds"
 
     def track_max_rss_kb(
         self,
@@ -78,6 +81,7 @@ class _BaseBenchmark:
         result = results[_param_key(threads, mpi_procs)]
         rss = result.time_usage.max_rss_kb
         return float(rss) if rss is not None else _nan(None)
+    track_max_rss_kb.unit = "KB"
 
     def track_cpu_percent(
         self,
@@ -87,6 +91,7 @@ class _BaseBenchmark:
     ) -> float:
         result = results[_param_key(threads, mpi_procs)]
         return _nan(result.time_usage.cpu_percent)
+    track_cpu_percent.unit = "%"
 
 
 class _OpenMCModelBenchmark(_BaseBenchmark):
@@ -123,6 +128,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.total_elapsed if stats else None)
+    track_total_time_elapsed.unit = "seconds"
 
     def track_initialization_time(
         self,
@@ -133,6 +139,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.initialization if stats else None)
+    track_initialization_time.unit = "seconds"
 
     def track_transport_time(
         self,
@@ -143,6 +150,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.transport if stats else None)
+    track_transport_time.unit = "seconds"
 
     def track_calc_rate_inactive(
         self,
@@ -153,6 +161,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_inactive if stats else None)
+    track_calc_rate_inactive.unit = "particles/sec"
 
     def track_calc_rate_active(
         self,
@@ -163,6 +172,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_active if stats else None)
+    track_calc_rate_active.unit = "particles/sec"
 
     def _ensure_runner(self) -> OpenMCRunner:
         if self._runner is None:
