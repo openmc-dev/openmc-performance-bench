@@ -130,7 +130,7 @@ jobs:
         run: |
           python scripts/collect_metadata.py \
             --results-dir ".asv/results/${{ steps.machine.outputs.machine_name }}" \
-            --openmc-build-dir .asv/env/*/ \
+            --openmc-build-dir .asv/env/*/project/build \
             --dagmc-dir $DAGMC_INSTALL_DIR \
             --moab-dir $MOAB_INSTALL_DIR \
             --libmesh-dir $LIBMESH_INSTALL_DIR
