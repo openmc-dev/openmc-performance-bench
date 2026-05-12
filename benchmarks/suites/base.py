@@ -319,11 +319,12 @@ class _PythonBenchmark(_BaseBenchmark):
             script_path.write_text(
                 f"import json\n"
                 f"import importlib\n"
-                f"mod = importlib.import_module({self._module_path!r})\n"
-                f"metrics = mod.run_benchmark(threads={threads!r}, mpi_procs={mpi_procs!r})\n"
-                f"if metrics is not None:\n"
-                f"    with open({str(metrics_path)!r}, 'w') as fh:\n"
-                f"        json.dump(metrics, fh)\n"
+                f"if __name__ == '__main__':\n"
+                f"    mod = importlib.import_module({self._module_path!r})\n"
+                f"    metrics = mod.run_benchmark(threads={threads!r}, mpi_procs={mpi_procs!r})\n"
+                f"    if metrics is not None:\n"
+                f"        with open({str(metrics_path)!r}, 'w') as fh:\n"
+                f"            json.dump(metrics, fh)\n"
             )
 
             env = OpenMCRunner._build_environment(
