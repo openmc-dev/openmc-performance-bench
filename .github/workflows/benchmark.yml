@@ -4,14 +4,7 @@
 
 name: benchmark
 
-# TODO: Decide when to trigger the performance benchmark runs (Nightly? Weekly?
-# And/or on pushes to develop? Possibly a subset of benchmarks in some cases,
-# the full suite in others?)
 on:
-  # Nightly run against the tip of the develop branch
-  # schedule:
-  #   - cron: '0 2 * * *'   # Daily at 2:00 am UTC
-
   # Manual trigger, optionally targeting a specific OpenMC ref
   workflow_dispatch:
     inputs:
@@ -20,7 +13,7 @@ on:
         required: false
         default: 'develop'
 
-  # Triggered from openmc-dev/openmc via repository_dispatch
+  # TODO: Trigger from openmc-dev/openmc via repository_dispatch
   # repository_dispatch:
   #   types: [run-perf]
 
