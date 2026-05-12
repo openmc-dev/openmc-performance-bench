@@ -104,8 +104,20 @@ jobs:
           echo "$LIBMESH_INSTALL_DIR/bin" >> "$GITHUB_PATH"
 
       - name: Register machine with ASV
-        # Use a fixed name that describes the hardware, not the ephemeral hostname
-        run: asv machine --yes --machine ec2-c7i-flex-large
+        id: machine
+        run: |
+          # Request an IMDSv2 session token from the EC2 metadata service
+          TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" \
+            -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" -s)
+
+          # Query the EC2 instance type using the metadata token
+          INSTANCE_TYPE=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" \
+            -s http://169.254.169.254/latest/meta-data/instance-type)
+
+          # Use a fixed name that describes the hardware, not the ephemeral hostname
+          MACHINE_NAME="ec2-${INSTANCE_TYPE//./-}"
+          echo "machine_name=$MACHINE_NAME" >> "$GITHUB_OUTPUT"
+          asv machine --yes --machine "$MACHINE_NAME"
 
       - name: Run benchmarks
         id: asv-run
