@@ -161,7 +161,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_inactive if stats else None)
-    track_calc_rate_inactive.unit = "particles/sec"
+    track_calc_rate_inactive.unit = "particles / second"
 
     def track_calc_rate_active(
         self,
@@ -172,7 +172,7 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
         result = results[_param_key(threads, mpi_procs)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_active if stats else None)
-    track_calc_rate_active.unit = "particles/sec"
+    track_calc_rate_active.unit = "particles / second"
 
     def _ensure_runner(self) -> OpenMCRunner:
         if self._runner is None:
