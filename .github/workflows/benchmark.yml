@@ -88,6 +88,7 @@ jobs:
     env:
       MOAB_INSTALL_DIR: /opt/software/moab
       DAGMC_INSTALL_DIR: /opt/software/dagmc
+      LIBMESH_INSTALL_DIR: /opt/software/libmesh
       OPENMC_CROSS_SECTIONS: /opt/data/endfb-vii.1-hdf5/cross_sections.xml
     steps:
       - uses: actions/checkout@v4
@@ -107,6 +108,7 @@ jobs:
           echo "/opt/tools-venv/bin" >> "$GITHUB_PATH"
           echo "$MOAB_INSTALL_DIR/bin" >> "$GITHUB_PATH"
           echo "$DAGMC_INSTALL_DIR/bin" >> "$GITHUB_PATH"
+          echo "$LIBMESH_INSTALL_DIR/bin" >> "$GITHUB_PATH"
 
       - name: Register machine with ASV
         # Use a fixed name that describes the hardware, not the ephemeral hostname
