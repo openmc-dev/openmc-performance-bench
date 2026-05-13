@@ -126,13 +126,18 @@ jobs:
           echo "machine_name=$MACHINE_NAME" >> "$GITHUB_OUTPUT"
           asv machine --yes --machine "$MACHINE_NAME"
 
+      - name: Point ASV results at results repo
+        run: |
+          mkdir -p results-repo/results
+          mkdir -p .asv
+          rm -rf .asv/results
+          ln -s "${{ github.workspace }}/results-repo/results" "${{ github.workspace }}/.asv/results"
+
       - name: Run benchmarks
         id: asv-run
         continue-on-error: true
         run: |
-          PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! \
-            --results-dir results-repo/results \
-            --show-stderr -vv
+          PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr -vv
 
       - name: Inject metadata into results
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
@@ -148,8 +153,7 @@ jobs:
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         run: |
           if [ -d results-repo/results ]; then
-            asv publish --results-dir results-repo/results \
-                        --html-dir results-repo/html
+            asv publish --html-dir results-repo/html
           else
             echo "No ASV results found; skipping publish"
           fi
