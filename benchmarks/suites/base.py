@@ -62,16 +62,6 @@ class _BaseBenchmark:
         return _nan(result.time_usage.user_seconds)
     track_user_cpu.unit = "seconds"
 
-    def track_system_cpu(
-        self,
-        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
-    ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
-        return _nan(result.time_usage.system_seconds)
-    track_system_cpu.unit = "seconds"
-
     def track_max_rss_kb(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
@@ -82,16 +72,6 @@ class _BaseBenchmark:
         rss = result.time_usage.max_rss_kb
         return float(rss) if rss is not None else _nan(None)
     track_max_rss_kb.unit = "KB"
-
-    def track_cpu_percent(
-        self,
-        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
-    ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
-        return _nan(result.time_usage.cpu_percent)
-    track_cpu_percent.unit = "%"
 
 
 class _OpenMCModelBenchmark(_BaseBenchmark):
