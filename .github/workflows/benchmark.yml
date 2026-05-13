@@ -88,6 +88,13 @@ jobs:
         with:
           fetch-depth: 0   # ASV needs full history for commit metadata
 
+      - name: Clone results repo
+        uses: actions/checkout@v4
+        with:
+          repository: openmc-dev/openmc-performance-bench-results
+          path: results-repo
+          token: ${{ secrets.RESULTS_REPO_TOKEN }}
+
       - name: Determine OpenMC ref
         id: ref
         run: |
@@ -123,13 +130,15 @@ jobs:
         id: asv-run
         continue-on-error: true
         run: |
-          PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr -vv
+          PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! \
+            --results-dir results-repo/results \
+            --show-stderr -vv
 
       - name: Inject metadata into results
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         run: |
           python scripts/collect_metadata.py \
-            --results-dir ".asv/results/${{ steps.machine.outputs.machine_name }}" \
+            --results-dir "results-repo/results/${{ steps.machine.outputs.machine_name }}" \
             --openmc-build-dir .asv/env/*/project/build \
             --dagmc-dir $DAGMC_INSTALL_DIR \
             --moab-dir $MOAB_INSTALL_DIR \
@@ -138,28 +147,32 @@ jobs:
       - name: Publish HTML report
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         run: |
-          if [ -d .asv/results ]; then
-            asv publish
+          if [ -d results-repo/results ]; then
+            asv publish --results-dir results-repo/results \
+                        --html-dir results-repo/html
           else
             echo "No ASV results found; skipping publish"
           fi
 
-      - name: Commit results to repo
+      - name: Commit and push results
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         run: |
+          cd results-repo
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .asv/results/
+          git add results/
           git diff --cached --quiet || \
-            git commit -m "Add benchmark results for ${{ steps.ref.outputs.openmc_ref }} [skip ci]"
+            git commit -m "Add benchmark results for ${{ steps.ref.outputs.openmc_ref }}"
           git push
 
       - name: Deploy HTML to GitHub Pages
-        if: (steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure') && hashFiles('.asv/html/index.html') != ''
+        if: (steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure') && hashFiles('results-repo/html/index.html') != ''
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .asv/html
+          personal_token: ${{ secrets.RESULTS_REPO_TOKEN }}
+          external_repository: openmc-dev/openmc-performance-bench-results
+          publish_branch: gh-pages
+          publish_dir: results-repo/html
           keep_files: true
 
       - name: Fail if any benchmarks failed
