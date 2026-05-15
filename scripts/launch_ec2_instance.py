@@ -19,7 +19,7 @@ import boto3
 # ---------------------------------------------------------------------------
 # Configuration — edit these to match your account / AMI
 # ---------------------------------------------------------------------------
-IMAGE_ID        = "ami-0b70b91232ef06e9f"
+IMAGE_ID        = "ami-0dd817d8c8a139613"
 INSTANCE_TYPE   = "c7i-flex.xlarge"
 KEYPAIR_NAME    = None                     # Optional; set to None to omit
 SECURITY_GROUP  = "sg-09c219bca773abbc7"
