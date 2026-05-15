@@ -14,7 +14,7 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
   build-essential g++ gfortran cmake git wget jq \
   python${PYVER} python${PYVER}-venv python${PYVER}-dev python3-pip \
-  openmpi-bin libopenmpi-dev libhdf5-openmpi-dev libpng-dev libpugixml-dev \
+  mpich libmpich-dev libhdf5-mpich-dev libpng-dev libpugixml-dev \
   libfmt-dev libeigen3-dev libnetcdf-dev libtbb-dev numactl libembree-dev time
 
 sudo mkdir -p ${TOOLS_VENV}

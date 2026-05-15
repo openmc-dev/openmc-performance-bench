@@ -54,13 +54,17 @@ def get_env_vars() -> dict:
 
 
 def get_mpi_version() -> str:
-    """Get MPI version from ompi_info."""
+    """Get MPI version string from mpirun."""
     try:
-        return subprocess.check_output(
-            ["ompi_info", "--version"],
+        output = subprocess.check_output(
+            ["mpirun", "--version"],
             stderr=subprocess.STDOUT,
             text=True,
-        ).splitlines()[0].strip()
+        )
+        for line in output.splitlines():
+            if "Version:" in line:
+                return line.split(":", 1)[1].strip()
+        return output.splitlines()[0].strip()
     except Exception:
         return "unknown"
 
