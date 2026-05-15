@@ -30,7 +30,7 @@ class _BaseBenchmark:
     """Common base for all benchmarks with ``time -v`` metrics."""
 
     params = (_CONFIGS,)
-    param_names = ("config",)
+    param_names = ("(threads, mpi_procs)",)
     timeout = 600
 
     configs: Tuple[Tuple[int, Optional[int]], ...] = _CONFIGS
@@ -246,6 +246,7 @@ class _PythonBenchmark(_BaseBenchmark):
     """Benchmark that runs arbitrary Python code as a subprocess."""
 
     params = (_PYTHON_DEFAULT_CONFIGS,)
+    param_names = ("(threads, mpi_procs)",)
 
     configs: Tuple[Tuple[int, Optional[int]], ...] = _PYTHON_DEFAULT_CONFIGS
 

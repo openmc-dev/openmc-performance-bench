@@ -8,27 +8,25 @@ from .suites import make_benchmark, make_python_benchmark
 
 __all__ = []
 
-for _module_name, (benchmark_name, builder, thread_opts, mpi_opts, custom_metrics) in sorted(
+for _module_name, (benchmark_name, builder, configs, custom_metrics) in sorted(
     MODEL_REGISTRY.items(), key=lambda item: item[1][0]
 ):
     cls = make_benchmark(
         benchmark_name,
         builder,
-        thread_options=thread_opts,
-        mpi_options=mpi_opts,
+        configs=configs,
         custom_metrics=custom_metrics,
     )
     globals()[benchmark_name] = cls
     __all__.append(benchmark_name)
 
-for _module_name, (benchmark_name, module_path, thread_opts, mpi_opts, custom_metrics, return_metrics) in sorted(
+for _module_name, (benchmark_name, module_path, configs, custom_metrics, return_metrics) in sorted(
     SCRIPT_REGISTRY.items(), key=lambda item: item[1][0]
 ):
     cls = make_python_benchmark(
         benchmark_name,
         module_path,
-        thread_options=thread_opts,
-        mpi_options=mpi_opts,
+        configs=configs,
         custom_metrics=custom_metrics,
         return_metrics=return_metrics,
     )
