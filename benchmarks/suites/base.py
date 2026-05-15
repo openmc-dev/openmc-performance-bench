@@ -11,14 +11,14 @@ from typing import Callable, Dict, Optional, Tuple, Type
 import openmc
 
 from ..openmc_runner import OpenMCRunResult, OpenMCRunner, _tty_write, _run_subprocess_live
-from ..config import _MPI_OPTIONS, _MPI_RUNNER, _THREAD_OPTIONS, _param_key, _nan
+from ..config import _CONFIGS, _MPI_RUNNER, _param_key, _nan
 
 
 def _make_custom_track(metric_name: str) -> Callable:
     """Create a ``track_*`` method that reads a pre-computed custom metric."""
 
-    def track(self, results, threads, mpi_procs):
-        result = results[_param_key(threads, mpi_procs)]
+    def track(self, results, config):
+        result = results[_param_key(*config)]
         return _nan(result.custom_metrics.get(metric_name))
 
     track.__name__ = f"track_{metric_name}"
@@ -29,12 +29,11 @@ def _make_custom_track(metric_name: str) -> Callable:
 class _BaseBenchmark:
     """Common base for all benchmarks with ``time -v`` metrics."""
 
-    params = (_THREAD_OPTIONS, _MPI_OPTIONS)
-    param_names = ("threads", "mpi_procs")
+    params = (_CONFIGS,)
+    param_names = ("config",)
     timeout = 600
 
-    thread_options: Tuple[int, ...] = _THREAD_OPTIONS
-    mpi_options: Tuple[Optional[int], ...] = _MPI_OPTIONS
+    configs: Tuple[Tuple[int, Optional[int]], ...] = _CONFIGS
 
     _custom_metrics: Dict[str, Callable] = {}
 
@@ -45,30 +44,27 @@ class _BaseBenchmark:
     def track_elapsed_wall(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         return _nan(result.time_usage.elapsed_seconds)
     track_elapsed_wall.unit = "seconds"
 
     def track_user_cpu(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         return _nan(result.time_usage.user_seconds)
     track_user_cpu.unit = "seconds"
 
     def track_max_rss_kb(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         rss = result.time_usage.max_rss_kb
         return float(rss) if rss is not None else _nan(None)
     track_max_rss_kb.unit = "KB"
@@ -90,22 +86,20 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
             runner = self._ensure_runner()
             model = self._ensure_model()
             cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
-            for threads in self.thread_options:
-                for mpi_procs in self.mpi_options:
-                    _tty_write(f"  Running: threads={threads}, mpi_procs={mpi_procs}\n")
-                    result = self._run_model(runner, model, threads, mpi_procs)
-                    self._compute_custom_metrics(result)
-                    cache[(threads, mpi_procs)] = result
+            for threads, mpi_procs in self.configs:
+                _tty_write(f"  Running: threads={threads}, mpi_procs={mpi_procs}\n")
+                result = self._run_model(runner, model, threads, mpi_procs)
+                self._compute_custom_metrics(result)
+                cache[(threads, mpi_procs)] = result
             self._cache = cache
         return self._cache
 
     def track_total_time_elapsed(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         stats = result.timing_stats
         return _nan(stats.total_elapsed if stats else None)
     track_total_time_elapsed.unit = "seconds"
@@ -113,10 +107,9 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
     def track_initialization_time(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         stats = result.timing_stats
         return _nan(stats.initialization if stats else None)
     track_initialization_time.unit = "seconds"
@@ -124,10 +117,9 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
     def track_transport_time(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         stats = result.timing_stats
         return _nan(stats.transport if stats else None)
     track_transport_time.unit = "seconds"
@@ -135,10 +127,9 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
     def track_calc_rate_inactive(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_inactive if stats else None)
     track_calc_rate_inactive.unit = "particles / second"
@@ -146,10 +137,9 @@ class _OpenMCModelBenchmark(_BaseBenchmark):
     def track_calc_rate_active(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        threads: int,
-        mpi_procs: Optional[int],
+        config: Tuple[int, Optional[int]],
     ) -> float:
-        result = results[_param_key(threads, mpi_procs)]
+        result = results[_param_key(*config)]
         stats = result.timing_stats
         return _nan(stats.calc_rate_active if stats else None)
     track_calc_rate_active.unit = "particles / second"
@@ -227,17 +217,14 @@ def make_benchmark(
     name: str,
     model_builder: Callable[[], openmc.Model],
     *,
-    thread_options: Tuple[int, ...] | None = None,
-    mpi_options: Tuple[Optional[int], ...] | None = None,
+    configs: Tuple[Tuple[int, Optional[int]], ...] | None = None,
     custom_metrics: Dict[str, Callable] | None = None,
 ) -> Type[_OpenMCModelBenchmark]:
-    threads = thread_options or _THREAD_OPTIONS
-    mpi = mpi_options or _MPI_OPTIONS
+    config_options = configs or _CONFIGS
     namespace: Dict[str, object] = {
         "__doc__": f"Benchmark for {name} model.",
-        "thread_options": threads,
-        "mpi_options": mpi,
-        "params": (threads, mpi),
+        "configs": config_options,
+        "params": (config_options,),
         "_build_model": staticmethod(model_builder),
         "_custom_metrics": custom_metrics or {},
     }
@@ -252,17 +239,15 @@ def make_benchmark(
 # Python script benchmarks
 # ---------------------------------------------------------------------------
 
-_PYTHON_DEFAULT_THREADS: Tuple[int, ...] = (1,)
-_PYTHON_DEFAULT_MPI: Tuple[Optional[int], ...] = (None,)
+_PYTHON_DEFAULT_CONFIGS: Tuple[Tuple[int, Optional[int]], ...] = ((1, None),)
 
 
 class _PythonBenchmark(_BaseBenchmark):
     """Benchmark that runs arbitrary Python code as a subprocess."""
 
-    params = (_PYTHON_DEFAULT_THREADS, _PYTHON_DEFAULT_MPI)
+    params = (_PYTHON_DEFAULT_CONFIGS,)
 
-    thread_options: Tuple[int, ...] = _PYTHON_DEFAULT_THREADS
-    mpi_options: Tuple[Optional[int], ...] = _PYTHON_DEFAULT_MPI
+    configs: Tuple[Tuple[int, Optional[int]], ...] = _PYTHON_DEFAULT_CONFIGS
 
     _module_path: str = ""  # fully qualified module name, set by factory
     _return_metrics: Tuple[str, ...] = ()
@@ -276,10 +261,9 @@ class _PythonBenchmark(_BaseBenchmark):
         _tty_write(f"{'=' * 60}\n")
         if self._cache is None:
             cache: Dict[Tuple[int, Optional[int]], OpenMCRunResult] = {}
-            for threads in self.thread_options:
-                for mpi_procs in self.mpi_options:
-                    _tty_write(f"  Running: threads={threads}, mpi_procs={mpi_procs}\n")
-                    cache[(threads, mpi_procs)] = self._run_script(threads, mpi_procs)
+            for threads, mpi_procs in self.configs:
+                _tty_write(f"  Running: threads={threads}, mpi_procs={mpi_procs}\n")
+                cache[(threads, mpi_procs)] = self._run_script(threads, mpi_procs)
             self._cache = cache
         return self._cache
 
@@ -408,13 +392,11 @@ def make_python_benchmark(
     name: str,
     module_path: str,
     *,
-    thread_options: Tuple[int, ...] | None = None,
-    mpi_options: Tuple[Optional[int], ...] | None = None,
+    configs: Tuple[Tuple[int, Optional[int]], ...] | None = None,
     custom_metrics: Dict[str, Callable] | None = None,
     return_metrics: Tuple[str, ...] | None = None,
 ) -> Type[_PythonBenchmark]:
-    threads = thread_options or _PYTHON_DEFAULT_THREADS
-    mpi = mpi_options or _PYTHON_DEFAULT_MPI
+    config_options = configs or _PYTHON_DEFAULT_CONFIGS
     return_metric_names = tuple(return_metrics or ())
     custom_metric_names = tuple((custom_metrics or {}).keys())
     duplicate_metrics = set(return_metric_names).intersection(custom_metric_names)
@@ -423,9 +405,8 @@ def make_python_benchmark(
         raise ValueError(f"Duplicate Python benchmark metric names: {names}")
     namespace: Dict[str, object] = {
         "__doc__": f"Python benchmark for {name}.",
-        "thread_options": threads,
-        "mpi_options": mpi,
-        "params": (threads, mpi),
+        "configs": config_options,
+        "params": (config_options,),
         "_module_path": module_path,
         "_custom_metrics": custom_metrics or {},
         "_return_metrics": return_metric_names,

@@ -36,16 +36,14 @@ def _discover() -> None:
         if runner is None:
             continue
         benchmark_name = getattr(module, "BENCHMARK_NAME", _default_benchmark_name(module_info.name))
-        thread_opts = getattr(module, "THREAD_OPTIONS", None)
-        mpi_opts = getattr(module, "MPI_OPTIONS", None)
+        configs = getattr(module, "CONFIGS", None)
         custom_metrics = getattr(module, "CUSTOM_METRICS", None)
         return_metrics = tuple(getattr(module, "RETURN_METRICS", ()))
         module_path = f"{package}.{module_info.name}"
         SCRIPT_REGISTRY[module_info.name] = (
             benchmark_name,
             module_path,
-            thread_opts,
-            mpi_opts,
+            configs,
             custom_metrics,
             return_metrics,
         )

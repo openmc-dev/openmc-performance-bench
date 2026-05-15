@@ -31,15 +31,14 @@ def _discover() -> None:
         if builder is None:
             continue
         benchmark_name = getattr(module, "BENCHMARK_NAME", _default_benchmark_name(module_info.name))
-        thread_opts = getattr(module, "THREAD_OPTIONS", None)
-        mpi_opts = getattr(module, "MPI_OPTIONS", None)
+        configs = getattr(module, "CONFIGS", None)
         custom_metrics = getattr(module, "CUSTOM_METRICS", None)
-        MODEL_REGISTRY[module_info.name] = (benchmark_name, builder, thread_opts, mpi_opts, custom_metrics)
+        MODEL_REGISTRY[module_info.name] = (benchmark_name, builder, configs, custom_metrics)
 
 
 _discover()
 
-for _module, (_benchmark_name, builder, _thread_opts, _mpi_opts, _custom) in MODEL_REGISTRY.items():
+for _module, (_benchmark_name, builder, _configs, _custom) in MODEL_REGISTRY.items():
     globals()[_module] = builder
 
 __all__ = ['MODEL_REGISTRY', 'ModelBuilder', 'ModelSpec'] + sorted(MODEL_REGISTRY)

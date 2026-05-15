@@ -12,7 +12,7 @@ import openmc.mgxs
 from benchmarks.models._jetson2d import build_base_model
 
 BENCHMARK_NAME = "Jetson2dMgxs"
-THREAD_OPTIONS = (1, 2, 4)
+CONFIGS = ((1, None), (2, None), (4, None))
 
 
 def run_benchmark(threads, mpi_procs):

@@ -9,8 +9,6 @@ from typing import Optional, Tuple
 
 from .openmc_runner import OpenMCRunner
 
-_THREAD_OPTIONS: Tuple[int, ...] = (1, 2)
-
 
 def _detect_mpi_runner() -> Optional[Tuple[str, ...]]:
     for candidate in ("mpirun", "mpiexec"):
@@ -32,7 +30,17 @@ def _detect_mpi_enabled() -> bool:
 
 
 _MPI_ENABLED = _detect_mpi_enabled()
-_MPI_OPTIONS: Tuple[Optional[int], ...] = (None,) if (_MPI_ENABLED and _MPI_RUNNER) else (None,)
+
+# Explicit list of (threads, MPI procs) configurations to benchmark
+_CONFIGS: Tuple[Tuple[int, Optional[int]], ...] = (
+    (1, None),
+    (4, None),
+)
+if _MPI_ENABLED and _MPI_RUNNER:
+    _CONFIGS += (
+        (1, 4),
+        (2, 2),
+    )
 
 
 def _param_key(threads: object, mpi_procs: object) -> Tuple[int, Optional[int]]:
@@ -49,9 +57,8 @@ def _nan(value: Optional[float]) -> float:
 
 
 __all__ = [
-    "_MPI_OPTIONS",
+    "_CONFIGS",
     "_MPI_RUNNER",
-    "_THREAD_OPTIONS",
     "_param_key",
     "_nan",
 ]
