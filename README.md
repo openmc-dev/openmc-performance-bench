@@ -101,10 +101,7 @@ Each benchmark runs OpenMC under GNU `time -v`, which provides system-level reso
 | Metric | Description |
 |---|---|
 | `track_elapsed_wall` | Total wall-clock time (seconds) |
-| `track_user_cpu` | User-space CPU time (seconds) |
-| `track_system_cpu` | Kernel-space CPU time (seconds) |
 | `track_max_rss_kb` | Peak resident memory usage (KB) |
-| `track_cpu_percent` | CPU utilization (%) |
 
 **From OpenMC stdout:**
 

@@ -50,15 +50,6 @@ class _BaseBenchmark:
         return _nan(result.time_usage.elapsed_seconds)
     track_elapsed_wall.unit = "seconds"
 
-    def track_user_cpu(
-        self,
-        results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
-        config: Tuple[int, Optional[int]],
-    ) -> float:
-        result = results[_param_key(*config)]
-        return _nan(result.time_usage.user_seconds)
-    track_user_cpu.unit = "seconds"
-
     def track_max_rss_kb(
         self,
         results: Dict[Tuple[int, Optional[int]], OpenMCRunResult],
