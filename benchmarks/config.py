@@ -34,14 +34,12 @@ _MPI_ENABLED = _detect_mpi_enabled()
 # Explicit list of (threads, MPI procs) configurations to benchmark
 _CONFIGS: Tuple[Tuple[int, Optional[int]], ...] = (
     (1, None),
-    (12, None),
-    (48, None),
+    (4, None),
 )
 if _MPI_ENABLED and _MPI_RUNNER:
     _CONFIGS += (
-        (1, 48),
-        (4, 12),
-        (12, 4),
+        (1, 4),
+        (2, 2),
     )
 
 
