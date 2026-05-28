@@ -13,10 +13,12 @@ import openmc.mgxs
 import openmc.stats
 
 from ._jetson2d import RO, build_base_model, _chdir
+from benchmarks.config import _CONFIGS
 
 BENCHMARK_NAME = "Jetson2dRandomRay"
 
 _MODELS_DIR = Path(__file__).parent
+CONFIGS = tuple(config for config in _CONFIGS if config[1] is None)
 
 
 def build_model() -> openmc.Model:
