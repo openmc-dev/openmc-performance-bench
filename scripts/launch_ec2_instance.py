@@ -19,7 +19,7 @@ import boto3
 # ---------------------------------------------------------------------------
 # Configuration — edit these to match your account / AMI
 # ---------------------------------------------------------------------------
-IMAGE_ID        = "ami-0dd817d8c8a139613"
+IMAGE_ID        = "ami-0596228287932efa3"
 INSTANCE_TYPE   = "c7i.metal-24xl"
 KEYPAIR_NAME    = None                     # Optional; set to None to omit
 SECURITY_GROUP  = "sg-09c219bca773abbc7"
