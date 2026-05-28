@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import openmc.mgxs
 
+from benchmarks.config import _CONFIGS
 from benchmarks.models._jetson2d import build_base_model
 
 BENCHMARK_NAME = "Jetson2dMgxs"
-CONFIGS = ((1, None), (2, None), (4, None))
+CONFIGS = tuple(config for config in _CONFIGS if config[1] is None)
 
 
 def run_benchmark(threads, mpi_procs):
