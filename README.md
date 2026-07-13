@@ -152,6 +152,17 @@ Model benchmarks build an `openmc.Model` and run the `openmc` executable. They a
 
 Model benchmarks are parameterized by thread count and MPI ranks by default (see [benchmarks/config.py](benchmarks/config.py) for defaults) and record both GNU `time -v` metrics and OpenMC-specific timing metrics.
 
+### Generating model XML
+
+To export a benchmark model as an XML file, use `generate_model.py` with the model module name:
+
+```sh
+python generate_model.py mesh_tally_regular --output-dir /tmp
+# writes /tmp/mesh_tally_regular.xml
+```
+
+The generated file is a model XML file named after the benchmark module. If `--output-dir` is omitted, it is written to the current directory.
+
 ### Python benchmarks
 
 Python benchmarks run arbitrary Python code (e.g., testing OpenMC's Python API performance) as a subprocess. They are discovered from [benchmarks/scripts/](benchmarks/scripts/). To add one:

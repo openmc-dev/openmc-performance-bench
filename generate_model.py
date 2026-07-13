@@ -3,11 +3,10 @@
 
 For example::
 
-    python generate_model.py mesh_tally_regular
-    openmc mesh_tally_regular
+    python generate_model.py mesh_tally_regular --output-dir /tmp
 
 The model module is imported from ``benchmarks.models``. The output directory
-contains the combined ``model.xml`` file expected by the OpenMC executable.
+contains a model XML file named after the model module.
 """
 
 import argparse
@@ -17,7 +16,7 @@ from pathlib import Path
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate a runnable model.xml from an OpenMC benchmark."
+        description="Generate a model XML file from an OpenMC benchmark."
     )
     parser.add_argument(
         "model_name",
@@ -26,7 +25,8 @@ def main() -> int:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        help="directory for model.xml (default: ./<model_name>)",
+        default=Path("."),
+        help="directory for the generated XML (default: current directory)",
     )
     args = parser.parse_args()
 
@@ -48,9 +48,9 @@ def main() -> int:
     print(f"Building model from benchmarks.models.{args.model_name}...")
     model = module.build_model()
 
-    output_dir = args.output_dir or Path(args.model_name)
+    output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / "model.xml"
+    output_file = output_dir / f"{args.model_name}.xml"
     print(f"Exporting to {output_file}...")
     model.export_to_model_xml(output_file)
 
