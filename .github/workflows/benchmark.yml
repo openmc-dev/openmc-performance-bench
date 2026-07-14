@@ -46,11 +46,20 @@ jobs:
           pip install --upgrade pip
           pip install boto3
 
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BENCH_APP_ID }}
+          private-key: ${{ secrets.BENCH_APP_PRIVATE_KEY }}
+          owner: openmc-dev
+          repositories: openmc-performance-bench
+
       - name: Get GitHub runner registration token
         id: reg-token
         run: |
           RESPONSE=$(curl -sS -X POST \
-            -H "Authorization: Bearer ${{ secrets.GH_RUNNER_TOKEN }}" \
+            -H "Authorization: Bearer ${{ steps.app-token.outputs.token }}" \
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token")
@@ -88,12 +97,21 @@ jobs:
         with:
           fetch-depth: 0   # ASV needs full history for commit metadata
 
+      - name: Create token to checkout results
+        id: results-checkout-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BENCH_APP_ID }}
+          private-key: ${{ secrets.BENCH_APP_PRIVATE_KEY }}
+          owner: openmc-dev
+          repositories: openmc-performance-bench-results
+
       - name: Clone results repo
         uses: actions/checkout@v4
         with:
           repository: openmc-dev/openmc-performance-bench-results
           path: results-repo
-          token: ${{ secrets.RESULTS_REPO_TOKEN }}
+          token: ${{ steps.results-checkout-token.outputs.token }}
 
       - name: Determine OpenMC ref
         id: ref
@@ -158,22 +176,37 @@ jobs:
             echo "No ASV results found; skipping publish"
           fi
 
+      # Benchmarks run could exceed app token lifetime, so generate another
+      - name: Create token for publishing results
+        id: results-publish-token
+        if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BENCH_APP_ID }}
+          private-key: ${{ secrets.BENCH_APP_PRIVATE_KEY }}
+          owner: openmc-dev
+          repositories: openmc-performance-bench-results
+
       - name: Commit and push results
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
+        env:
+          RESULTS_TOKEN: ${{ steps.results-publish-token.outputs.token }}
         run: |
           cd results-repo
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add results/
           git diff --cached --quiet || \
             git commit -m "Add benchmark results for ${{ steps.ref.outputs.openmc_ref }}"
+          git remote set-url origin \
+            "https://x-access-token:${RESULTS_TOKEN}@github.com/openmc-dev/openmc-performance-bench-results.git"
           git push
 
       - name: Deploy HTML to GitHub Pages
         if: (steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure') && hashFiles('results-repo/html/index.html') != ''
         uses: peaceiris/actions-gh-pages@v4
         with:
-          personal_token: ${{ secrets.RESULTS_REPO_TOKEN }}
+          personal_token: ${{ steps.results-publish-token.outputs.token }}
           external_repository: openmc-dev/openmc-performance-bench-results
           publish_branch: gh-pages
           publish_dir: results-repo/html
