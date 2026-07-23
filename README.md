@@ -191,10 +191,10 @@ MPI_OPTIONS = (None, 2)              # also test with 2 MPI ranks
 The `threads` and `mpi_procs` keyword arguments are passed to `run_benchmark()` so your code can adapt if needed. The framework also sets `OMP_NUM_THREADS` and `OPENMC_THREADS` in the subprocess environment.
 
 To run one of these benchmark functions directly in the current Python
-process, use `run_benchmark.py` with its module name:
+process, use `run_benchmark.py` with its benchmark name:
 
 ```sh
-python run_benchmark.py pack_spheres_sphere --threads 1
+python run_benchmark.py PackSpheresSphere --threads 1
 ```
 
 The runner sets the same thread environment variables used by the ASV harness

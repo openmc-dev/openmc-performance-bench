@@ -26,7 +26,7 @@ def _create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "benchmark",
-        help="benchmark script module name, e.g. pack_spheres_sphere",
+        help="benchmark name, e.g. PackSpheresSphere",
     )
     parser.add_argument(
         "--threads",
@@ -49,8 +49,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _create_parser()
     args = parser.parse_args(argv)
 
-    if not args.benchmark.isidentifier() or args.benchmark.startswith("_"):
-        parser.error("benchmark must be a public Python module name")
     if args.mpi_procs is not None and args.mpi_procs > 1:
         parser.error(
             "--mpi-procs greater than one requires an MPI launcher and is not "
@@ -62,14 +60,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     os.environ["OMP_NUM_THREADS"] = str(args.threads)
     os.environ["OPENMC_THREADS"] = str(args.threads)
 
-    module_name = f"benchmarks.scripts.{args.benchmark}"
-    try:
-        module = importlib.import_module(module_name)
-    except ModuleNotFoundError as exc:
-        if exc.name == module_name:
-            parser.error(f"benchmark module not found: {module_name}")
-        raise
+    scripts = importlib.import_module("benchmarks.scripts")
+    matches = [
+        module_path
+        for (
+            benchmark_name,
+            module_path,
+            _configs,
+            _custom_metrics,
+            _return_metrics,
+        ) in scripts.SCRIPT_REGISTRY.values()
+        if benchmark_name == args.benchmark
+    ]
+    if not matches:
+        parser.error(f"Python benchmark not found: {args.benchmark}")
+    if len(matches) > 1:
+        parser.error(f"Python benchmark name is ambiguous: {args.benchmark}")
 
+    module_name = matches[0]
+    module = importlib.import_module(module_name)
     benchmark = getattr(module, "run_benchmark", None)
     if not callable(benchmark):
         parser.error(f"{module_name} does not define a callable run_benchmark()")
