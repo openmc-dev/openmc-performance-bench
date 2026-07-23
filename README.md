@@ -291,6 +291,8 @@ asv.conf.json              # ASV configuration (repo URL, build commands, branch
 | `MeshTallyRectilinear` | Fine rectilinear mesh flux tally in a spherical model |
 | `MeshTallyCylindrical` | Fine cylindrical mesh flux tally in a spherical model |
 | `MeshTallySpherical` | Fine spherical mesh flux tally in a spherical model |
+| `MeshTallyUnstructuredLibMesh` | LibMesh-based unstructured mesh flux tally in a spherical model |
+| `MeshTallyUnstructuredMOAB` | MOAB-based unstructured mesh flux tally in a spherical model |
 | `BEAVRS` | Benchmark for Evaluation And Validation of Reactor Simulations |
 | `CrossSectionLookups` | 200+ nuclides (actinides + fission products); stresses cross-section lookup |
 | `DepletionTallies` | Cross-section lookup benchmark with depletion-like reaction rate tallies |
