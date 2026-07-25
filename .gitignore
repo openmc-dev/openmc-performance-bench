@@ -8,6 +8,10 @@ __pycache__/
 # C extensions
 *.so
 
+# Large benchmark data downloaded on demand
+/benchmarks/models/Eos.h5m
+/benchmarks/models/Eos.h5m.gz
+
 # Distribution / packaging
 .Python
 build/
