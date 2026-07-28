@@ -133,6 +133,8 @@ jobs:
         run: |
           pkg-config --modversion libmesh
           test -f "$OPENMC_CROSS_SECTIONS"
+          echo "Searching for libngcore:"
+          find /opt/software -name 'libngcore.so*' -print
 
       - name: Register machine with ASV
         id: machine
