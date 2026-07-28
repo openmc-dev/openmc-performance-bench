@@ -135,6 +135,8 @@ jobs:
           test -f "$OPENMC_CROSS_SECTIONS"
           echo "Searching for libngcore:"
           find /opt/software -name 'libngcore.so*' -print
+          export LD_LIBRARY_PATH="/opt/software/libmesh/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          ldconfig -p 2>/dev/null | grep libngcore || true
 
       - name: Register machine with ASV
         id: machine
@@ -163,6 +165,7 @@ jobs:
         id: asv-run
         continue-on-error: true
         run: |
+          export LD_LIBRARY_PATH="/opt/software/libmesh/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr -vv
 
       - name: Inject metadata into results
