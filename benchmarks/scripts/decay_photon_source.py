@@ -3,6 +3,7 @@
 from pathlib import Path
 import time
 
+import openmc
 from openmc.deplete import Results
 
 
@@ -14,9 +15,14 @@ RETURN_METRICS = (
 )
 
 _RESULTS_PATH = Path(__file__).resolve().parent / "activation_results.h5"
+_CHAIN_PATH = Path(__file__).resolve().parent / "chain_endfb80_reduced.xml"
 
 
 def run_benchmark(threads, mpi_procs):
+    # Decay photon data is loaded from the depletion chain. Use the same
+    # reduced chain that was used to produce the bundled activation results.
+    openmc.config["chain_file"] = _CHAIN_PATH
+
     t0 = time.perf_counter()
     results = Results(_RESULTS_PATH)
     last_step = results[-1]
