@@ -21,7 +21,7 @@ def run_benchmark(threads, mpi_procs):
     group_edges = openmc.mgxs.GROUP_STRUCTURES["CASMO-4"]
     model.convert_to_multigroup(
         method="stochastic_slab",
-        nparticles=1000,
+        particles=1000,
         groups=openmc.mgxs.EnergyGroups(group_edges),
         overwrite_mgxs_library=False,
         correction=None,

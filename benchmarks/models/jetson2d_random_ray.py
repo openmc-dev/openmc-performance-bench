@@ -30,7 +30,7 @@ def build_model() -> openmc.Model:
     with _chdir(_MODELS_DIR):
         model.convert_to_multigroup(
             method="stochastic_slab",
-            nparticles=10000,
+            particles=10000,
             groups=openmc.mgxs.EnergyGroups(group_edges),
             overwrite_mgxs_library=False,
             correction=None,
