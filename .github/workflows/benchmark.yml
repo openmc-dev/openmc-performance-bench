@@ -13,9 +13,13 @@ on:
         required: false
         default: 'develop'
 
-  # TODO: Trigger from openmc-dev/openmc via repository_dispatch
-  # repository_dispatch:
-  #   types: [run-perf]
+  # Trigger from openmc-dev/openmc via repository_dispatch
+  repository_dispatch:
+    types: [run-perf]
+
+concurrency:
+  group: openmc-performance-benchmark
+  cancel-in-progress: false
 
 permissions:
   contents: write
