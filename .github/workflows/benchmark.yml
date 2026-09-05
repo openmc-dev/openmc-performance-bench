@@ -33,16 +33,16 @@ jobs:
     outputs:
       instance_id: ${{ steps.launch.outputs.instance_id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure AWS credentials from OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::882559813539:role/GithubActionsRole
           aws-region: us-east-2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.14'
 
@@ -55,7 +55,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.BENCH_APP_ID }}
+          client-id: ${{ vars.BENCH_APP_ID }}
           private-key: ${{ secrets.BENCH_APP_PRIVATE_KEY }}
           owner: openmc-dev
           repositories: openmc-performance-bench
@@ -99,7 +99,7 @@ jobs:
       PKG_CONFIG_PATH: /opt/software/libmesh/lib/pkgconfig
       OPENMC_CROSS_SECTIONS: /opt/data/endfb-vii.1-hdf5/cross_sections.xml
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # ASV needs full history for commit metadata
 
@@ -107,13 +107,13 @@ jobs:
         id: results-checkout-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.BENCH_APP_ID }}
+          client-id: ${{ vars.BENCH_APP_ID }}
           private-key: ${{ secrets.BENCH_APP_PRIVATE_KEY }}
           owner: openmc-dev
           repositories: openmc-performance-bench-results
 
       - name: Clone results repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: openmc-dev/openmc-performance-bench-results
           path: results-repo
@@ -198,7 +198,7 @@ jobs:
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ vars.BENCH_APP_ID }}
+          client-id: ${{ vars.BENCH_APP_ID }}
           private-key: ${{ secrets.BENCH_APP_PRIVATE_KEY }}
           owner: openmc-dev
           repositories: openmc-performance-bench-results
@@ -239,7 +239,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials from OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::882559813539:role/GithubActionsRole
           aws-region: us-east-2
