@@ -287,12 +287,20 @@ jobs:
           FAILED_BENCHMARKS: ${{ needs.run-benchmarks.outputs.failed_benchmarks }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          # Shorten full SHAs for display; show unresolved refs (e.g. a bad
+          # branch name or 'develop') as-is
+          if [[ "$OPENMC_REF" =~ ^[0-9a-f]{40}$ ]]; then
+            REF_DISPLAY=${OPENMC_REF:0:8}
+          else
+            REF_DISPLAY=$OPENMC_REF
+          fi
+
           LABEL=benchmark-failure
           gh label create "$LABEL" --color d73a4a \
             --description "Automated performance benchmark run failed" --force
 
           {
-            echo "Benchmark run failed for OpenMC commit [\`${OPENMC_REF:0:8}\`](https://github.com/openmc-dev/openmc/commit/${OPENMC_REF})."
+            echo "Benchmark run failed for OpenMC commit [\`${REF_DISPLAY}\`](https://github.com/openmc-dev/openmc/commit/${OPENMC_REF})."
             echo
             echo "Workflow run: $RUN_URL"
             echo
@@ -310,7 +318,7 @@ jobs:
           if [ -n "$ISSUE" ]; then
             gh issue comment "$ISSUE" --body-file body.md
           else
-            gh issue create --title "Benchmark failures on OpenMC ${OPENMC_REF:0:8}" \
+            gh issue create --title "Benchmark failures on OpenMC ${REF_DISPLAY}" \
               --label "$LABEL" --body-file body.md
           fi
 
