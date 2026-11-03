@@ -92,6 +92,9 @@ jobs:
     needs: start-runner
     runs-on: [self-hosted, perf-ec2]
     timeout-minutes: 120
+    outputs:
+      openmc_sha: ${{ steps.ref.outputs.openmc_sha }}
+      failed_benchmarks: ${{ steps.failures.outputs.list }}
     env:
       MOAB_INSTALL_DIR: /opt/software/moab
       DAGMC_INSTALL_DIR: /opt/software/dagmc
@@ -126,6 +129,16 @@ jobs:
                || github.event.inputs.openmc_ref
                || 'develop' }}"
           echo "openmc_ref=$REF" >> "$GITHUB_OUTPUT"
+
+          # Resolve branch/tag/short SHA to a full commit hash so results from
+          # this run can be matched exactly and the benchmarked commit is fixed
+          SHA=$(curl -sSf \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/openmc-dev/openmc/commits/$REF" \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["sha"])')
+          echo "Resolved $REF to $SHA"
+          echo "openmc_sha=$SHA" >> "$GITHUB_OUTPUT"
 
       - name: Add tools and package directories to PATH
         run: |
@@ -170,18 +183,43 @@ jobs:
         id: asv-run
         continue-on-error: true
         run: |
+          # Only result files written after this time are attributed to this run
+          echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
           export LD_LIBRARY_PATH="/opt/software/libmesh/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-          PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_ref }}^! --show-stderr -vv
+          PYTHONUNBUFFERED=1 asv run ${{ steps.ref.outputs.openmc_sha }}^! --show-stderr -vv
 
       - name: Inject metadata into results
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         run: |
           python scripts/collect_metadata.py \
             --results-dir "results-repo/results/${{ steps.machine.outputs.machine_name }}" \
+            --commit "${{ steps.ref.outputs.openmc_sha }}" \
+            --since "${{ steps.asv-run.outputs.start }}" \
             --openmc-build-dir .asv/env/*/project/build \
             --dagmc-dir $DAGMC_INSTALL_DIR \
             --moab-dir $MOAB_INSTALL_DIR \
             --libmesh-dir $LIBMESH_INSTALL_DIR
+
+      - name: Summarize failed benchmarks
+        id: failures
+        if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
+        run: |
+          LIST=$(python scripts/summarize_failures.py \
+            --results-dir "results-repo/results/${{ steps.machine.outputs.machine_name }}" \
+            --commit "${{ steps.ref.outputs.openmc_sha }}" \
+            --since "${{ steps.asv-run.outputs.start }}")
+          {
+            echo "list<<EOF_FAILURES"
+            echo "$LIST"
+            echo "EOF_FAILURES"
+          } >> "$GITHUB_OUTPUT"
+          if [ -n "$LIST" ]; then
+            {
+              echo "## Failed benchmarks"
+              echo
+              echo "$LIST"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Publish HTML report
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
@@ -213,7 +251,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add results/
           git diff --cached --quiet || \
-            git commit -m "Add benchmark results for ${{ steps.ref.outputs.openmc_ref }}"
+            git commit -m "Add benchmark results for ${{ steps.ref.outputs.openmc_sha }}"
           git remote set-url origin \
             "https://x-access-token:${RESULTS_TOKEN}@github.com/openmc-dev/openmc-performance-bench-results.git"
           git push
@@ -231,6 +269,50 @@ jobs:
       - name: Fail if any benchmarks failed
         if: steps.asv-run.outcome == 'failure'
         run: exit 1
+
+  # Open (or comment on) a GitHub issue when a benchmark fails so repo watchers
+  # are notified.
+  notify-failure:
+    needs: [start-runner, run-benchmarks]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update benchmark failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OPENMC_REF: ${{ needs.run-benchmarks.outputs.openmc_sha || github.event.client_payload.sha || github.event.inputs.openmc_ref || 'develop' }}
+          FAILED_BENCHMARKS: ${{ needs.run-benchmarks.outputs.failed_benchmarks }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          LABEL=benchmark-failure
+          gh label create "$LABEL" --color d73a4a \
+            --description "Automated performance benchmark run failed" --force
+
+          {
+            echo "Benchmark run failed for OpenMC commit [\`${OPENMC_REF:0:8}\`](https://github.com/openmc-dev/openmc/commit/${OPENMC_REF})."
+            echo
+            echo "Workflow run: $RUN_URL"
+            echo
+            if [ -n "$FAILED_BENCHMARKS" ]; then
+              echo "### Failed benchmarks"
+              echo
+              echo "$FAILED_BENCHMARKS"
+            else
+              echo "No individual benchmark failures were recorded; the failure occurred elsewhere" \
+                   "in the workflow (e.g. EC2 launch, OpenMC build, or publishing). See the run log."
+            fi
+          } > body.md
+
+          ISSUE=$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --body-file body.md
+          else
+            gh issue create --title "Benchmark failures on OpenMC ${OPENMC_REF:0:8}" \
+              --label "$LABEL" --body-file body.md
+          fi
 
   # Always terminate the EC2 instance, even if benchmarks fail
   stop-runner:

@@ -106,29 +106,49 @@ def get_libmesh_version(libmesh_dir: str) -> str:
         return "unknown"
 
 
-def inject(results_dir: Path, metadata: dict) -> None:
-    result_files = [path for path in results_dir.glob("*.json") if path.name != "machine.json"]
+def find_result_files(results_dir: Path, commit: str, since: float) -> list[Path]:
+    """Return ASV result files for `commit` that were written at or after `since`.
 
-    if not result_files:
-        print(f"Warning: no result files found in {results_dir}", file=sys.stderr)
-        return
+    Matching on both the commit hash and modification time ensures that only
+    results produced by the current run are selected, never historical files
+    from the results repository.
+    """
+    matches = []
+    for path in sorted(results_dir.glob("*.json")):
+        if path.name == "machine.json" or path.stat().st_mtime < since:
+            continue
+        try:
+            data = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        if data.get("commit_hash") == commit:
+            matches.append(path)
+    return matches
 
-    # Get the most recently modified file
-    result_files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
-    result_file = result_files[0]
-    try:
-        data = json.loads(result_file.read_text())
-        data["system_metadata"] = metadata
-        result_file.write_text(json.dumps(data))
-        print(f"Injected metadata into '{result_file}'")
-    except Exception as e:
-        print(f"Failed to add metadata to '{result_file}'", file=sys.stderr)
+
+def add_selection_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--results-dir", required=True,
+                        help="ASV results directory for a single machine.")
+    parser.add_argument("--commit", required=True,
+                        help="Full hash of the OpenMC commit benchmarked in this run.")
+    parser.add_argument("--since", required=True, type=float,
+                        help="Unix time at which the benchmark run started; older files are ignored.")
+
+
+def inject(result_files: list[Path], metadata: dict) -> None:
+    for result_file in result_files:
+        try:
+            data = json.loads(result_file.read_text())
+            data["system_metadata"] = metadata
+            result_file.write_text(json.dumps(data))
+            print(f"Injected metadata into '{result_file}'")
+        except Exception:
+            print(f"Failed to add metadata to '{result_file}'", file=sys.stderr)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--results-dir", required=True,
-                        help="ASV results directory.")
+    add_selection_args(parser)
     parser.add_argument("--openmc-build-dir", default="",
                         help="Path (or glob) to the OpenMC CMake build directory.")
     parser.add_argument("--dagmc-dir", default=os.environ.get("DAGMC_INSTALL_DIR", ""),
@@ -138,6 +158,12 @@ def main() -> None:
     parser.add_argument("--libmesh-dir", default=os.environ.get("LIBMESH_INSTALL_DIR", ""),
                         help="LibMesh install directory (default: $LIBMESH_INSTALL_DIR).")
     args = parser.parse_args()
+
+    result_files = find_result_files(Path(args.results_dir), args.commit, args.since)
+    if not result_files:
+        print(f"Warning: no results for {args.commit} from this run in "
+              f"{args.results_dir}; not injecting metadata", file=sys.stderr)
+        return
 
     metadata = {
         "build": {
@@ -155,7 +181,7 @@ def main() -> None:
     print("Metadata collected:")
     print(json.dumps(metadata, indent=2))
 
-    inject(Path(args.results_dir), metadata)
+    inject(result_files, metadata)
 
 
 if __name__ == "__main__":
