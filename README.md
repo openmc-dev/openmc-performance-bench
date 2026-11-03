@@ -183,6 +183,10 @@ Python benchmarks run arbitrary Python code (e.g., testing OpenMC's Python API p
 
 Python benchmarks run once by default (1 thread, no MPI) and record only the GNU `time -v` metrics (wall-clock time, CPU time, memory). To opt in to thread/MPI parameterization, set `THREAD_OPTIONS` and/or `MPI_OPTIONS`:
 
+The [stock density-family workflow](scripts/density_family_README.md) provides
+`DensityFamily` (ten full calculations) and `DensityFamilySmoke` (a small scientific
+repeat check), using self-contained artificial multigroup data.
+
 ```python
 THREAD_OPTIONS = (1, 2, 4)           # sweep thread counts
 MPI_OPTIONS = (None, 2)              # also test with 2 MPI ranks
