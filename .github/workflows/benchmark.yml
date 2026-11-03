@@ -226,7 +226,7 @@ jobs:
           external_repository: openmc-dev/openmc-performance-bench-results
           publish_branch: gh-pages
           publish_dir: results-repo/html
-          keep_files: true
+          keep_files: false
 
       - name: Fail if any benchmarks failed
         if: steps.asv-run.outcome == 'failure'
