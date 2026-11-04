@@ -239,15 +239,6 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Publish HTML report
-        if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
-        run: |
-          if [ -d results-repo/results ]; then
-            asv publish --html-dir results-repo/html
-          else
-            echo "No ASV results found; skipping publish"
-          fi
-
       # Benchmarks run could exceed app token lifetime, so generate another
       - name: Create token for publishing results
         id: results-publish-token
@@ -259,6 +250,19 @@ jobs:
           owner: openmc-dev
           repositories: openmc-performance-bench-results
 
+      # Dashboard at the site root, full ASV report under asv/
+      - name: Build site
+        if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ steps.results-publish-token.outputs.token }}
+        run: |
+          if [ -d results-repo/results ]; then
+            scripts/publish_site.sh results-repo results-repo/html \
+              "${{ steps.machine.outputs.machine_name }}"
+          else
+            echo "No ASV results found; skipping publish"
+          fi
+
       - name: Commit and push results
         if: steps.asv-run.outcome == 'success' || steps.asv-run.outcome == 'failure'
         env:
@@ -268,6 +272,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add results/
+          # Commit titles/PRs cached by the dashboard build
+          if [ -f dashboard/commit_info.json ]; then
+            git add dashboard/commit_info.json
+          fi
           git diff --cached --quiet || \
             git commit -m "Add benchmark results for ${{ steps.ref.outputs.openmc_sha }}"
           git remote set-url origin \

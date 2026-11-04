@@ -1,0 +1,77 @@
+#-----------------------------------------------------------------------------#
+# Rebuild and deploy the published site (dashboard + ASV report) from the
+# existing results, without running benchmarks. Use after changing the
+# dashboard; benchmark runs also publish the site.
+#-----------------------------------------------------------------------------#
+
+name: publish-dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      machine:
+        description: 'ASV machine name whose results the dashboard shows'
+        required: false
+        default: 'ec2-c7i-metal-24xl'
+
+# Share the benchmark workflow's group so the two never deploy at once
+concurrency:
+  group: openmc-performance-benchmark
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Create token for results repo
+        id: results-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.BENCH_APP_ID }}
+          private-key: ${{ secrets.BENCH_APP_PRIVATE_KEY }}
+          owner: openmc-dev
+          repositories: openmc-performance-bench-results
+
+      - name: Clone results repo
+        uses: actions/checkout@v6
+        with:
+          repository: openmc-dev/openmc-performance-bench-results
+          path: results-repo
+          token: ${{ steps.results-token.outputs.token }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install ASV
+        run: pip install asv
+
+      - name: Point ASV results at results repo
+        run: |
+          # .asv/results is tracked in this repo; replace it, don't nest the link
+          mkdir -p .asv
+          rm -rf .asv/results
+          ln -s "${{ github.workspace }}/results-repo/results" .asv/results
+
+      - name: Build site
+        env:
+          GH_TOKEN: ${{ steps.results-token.outputs.token }}
+        run: |
+          scripts/publish_site.sh results-repo results-repo/html \
+            "${{ github.event.inputs.machine }}"
+
+      - name: Deploy HTML to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ steps.results-token.outputs.token }}
+          external_repository: openmc-dev/openmc-performance-bench-results
+          publish_branch: gh-pages
+          publish_dir: results-repo/html
+          keep_files: false

@@ -91,7 +91,7 @@ build and preview it:
 ```sh
 python dashboard/build_site.py \
     --results-dir ../openmc-performance-bench-results/results/ec2-c7i-metal-24xl \
-    --output _site --commit-cache commit_info.json
+    --output _site --commit-cache commit_info.json  # set GH_TOKEN=$(gh auth token) to avoid rate limits
 python -m http.server --directory _site
 ```
 
@@ -108,6 +108,22 @@ It has three views:
   its baseline, ordered by how unusual the change is for that series.
 
 The site expects the full ASV report to be published alongside it at `asv/`.
+
+## Publishing
+
+`scripts/publish_site.sh <results repo> <output dir> <machine>` builds the
+published site: the dashboard at the root and the ASV report under `asv/`
+(`.asv/results` must point at the results repo's `results/`). Commit titles
+and PRs are cached in the results repo at `dashboard/commit_info.json`. If the
+dashboard fails to build, the root redirects to the ASV report instead.
+
+It runs in two workflows, both deploying to the `gh-pages` branch of
+`openmc-performance-bench-results`:
+
+- `benchmark.yml`, after every benchmark run (it also commits the updated
+  commit cache);
+- `publish-dashboard.yml`, run manually from the Actions tab, to redeploy from
+  existing results after changing the dashboard (about 3 minutes, no EC2).
 
 ## Tests
 
