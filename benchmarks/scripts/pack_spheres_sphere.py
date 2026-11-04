@@ -11,5 +11,5 @@ def run_benchmark(threads, mpi_procs):
     sphere = openmc.Sphere(r=3)
     region = -sphere
     centers = openmc.model.pack_spheres(
-        radius=0.1, region=region, pf=0.4, initial_pf=0.2
+        radius=0.1, region=region, pf=0.4, initial_pf=0.2, seed=12345
     )

@@ -16,5 +16,5 @@ def run_benchmark(threads, mpi_procs):
     max_z = openmc.ZPlane(1)
     region = +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
     centers = openmc.model.pack_spheres(
-        radius=0.1, region=region, pf=0.5, initial_pf=0.1
+        radius=0.1, region=region, pf=0.5, initial_pf=0.1, seed=12345
     )
