@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenMC Performance</title>
+  <meta name="description" content="Performance history and detected regressions for OpenMC's benchmark suite.">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <a class="brand" href="#/">OpenMC performance</a>
+      <nav class="header-links" aria-label="Site">
+        <a href="#/">Overview</a>
+        <a href="asv/">Full ASV report</a>
+        <a href="https://github.com/openmc-dev/openmc-performance-bench">Benchmarks</a>
+        <button type="button" id="theme-toggle" class="ghost-button"
+                aria-label="Switch color theme">Theme: auto</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="filter-row" role="group" aria-label="Commit range">
+      <span class="filter-label">Show</span>
+      <div class="segmented" id="range-filter">
+        <button type="button" data-range="30">Last 30 commits</button>
+        <button type="button" data-range="90">Last 90 commits</button>
+        <button type="button" data-range="all">All</button>
+      </div>
+      <span class="filter-meta" id="data-meta"></span>
+    </div>
+
+    <main id="app" aria-live="polite">
+      <p class="muted">Loading benchmark data…</p>
+    </main>
+  </div>
+
+  <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+</body>
+</html>

@@ -82,6 +82,33 @@ commit, all candidate commits are listed. An event in a benchmark is
 benchmark, or if the event spans three or more benchmarks. Uncorroborated
 changes are shown separately; most of them are noise.
 
+## Dashboard site
+
+`site/` is a static page (plain HTML/CSS/ES modules, no build step or
+dependencies) that reads `data/perf.json` and `data/regressions.json`. To
+build and preview it:
+
+```sh
+python dashboard/build_site.py \
+    --results-dir ../openmc-performance-bench-results/results/ec2-c7i-metal-24xl \
+    --output _site --commit-cache commit_info.json
+python -m http.server --directory _site
+```
+
+It has three views:
+
+- **Overview**: recent detected changes (low-confidence ones collapsed) and a
+  table of every benchmark with its status, latest 1-thread time and memory,
+  change vs. the previous 10 commits (grey when within the series' noise), and
+  a trend line.
+- **Benchmark** (`#/benchmark/<name>?metric=<metric>`): one chart per
+  thread/MPI configuration, each on its own scale, with detected changes
+  marked; hover for commit details, click a point to open that commit.
+- **Commit** (`#/commit/<sha>`): every benchmark at one commit compared with
+  its baseline, ordered by how unusual the change is for that series.
+
+The site expects the full ASV report to be published alongside it at `asv/`.
+
 ## Tests
 
 ```sh
