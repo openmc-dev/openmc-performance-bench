@@ -156,6 +156,24 @@ jobs:
           export LD_LIBRARY_PATH="/opt/software/libmesh/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           ldconfig -p 2>/dev/null | grep libngcore || true
 
+      # The nuclear data and libraries are baked into the AMI, so on a fresh
+      # instance they're lazily loaded from the EBS snapshot on first read.
+      # This may be the reason the first OpenMC run of many benchmarks slow to
+      # initialize. Read everything once up front so every benchmark starts
+      # with the data cached.
+      - name: Pre-load nuclear data and libraries
+        run: |
+          DATA_DIR=$(dirname "$OPENMC_CROSS_SECTIONS")
+          du -sh "$DATA_DIR" /opt/software
+          START=$(date +%s)
+          # Parallel reads load snapshot blocks faster than a single stream
+          # Best effort: an unreadable file shouldn't fail the benchmark run
+          find "$DATA_DIR" /opt/software -type f -print0 \
+            | xargs -0 -n 16 -P 32 cat > /dev/null \
+            || echo "::warning::Some files could not be pre-loaded"
+          echo "Pre-loaded in $(( $(date +%s) - START )) s"
+          free -g
+
       - name: Register machine with ASV
         id: machine
         run: |
